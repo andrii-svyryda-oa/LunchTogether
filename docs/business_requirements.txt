@@ -1,0 +1,68 @@
+LunchTogether is a platform for organizing regular lunches or colleagues.
+
+The core idea: 
+Group of people (friends, colleagues, family) organizes regular meals together. 
+The app will help to organize the meals, track the expenses and manage virtual balances of the group.
+
+User roles:
+
+- Admin: can observe all groups and users, can edit all groups and users, can create new groups and users.
+- User: can see only his groups, can''t see all users, can create limited groups.
+
+Main (left) menu should be like on discord:
+First square should be button to user home with some analytics and navigation to settings.
+And then each row square should be button to specific group.
+
+Groups feature:
+User can see only his own groups.
+The app will allow participating many groups, invite in app friends to groups, invite people to groups via email (it will send registration link if not registered or in app invite if already registered).
+Each user can have up to 5 groups and up to 25 participants in each group.
+Group members can have different group permission scopes on different group features:
+
+- Members: Editor, Viewer, None
+- Orders: Editor, Initiator, Participant
+- Balances: Editor, Viewer, None
+- Analytics: Viewer, None
+- Restaurants: Editor, Viewer
+
+There should be options to select role that will define permission scopes, and then specific scopes can be adjusted. 
+There should be these levels: Admin (highest roles everywhere), SupervisorMember (Viewer permission everywhere) , Member (lowest roles everywhere).
+Users with Members Editor Permission level can't do anything with group owner.
+
+When user enters group page, if there is an active order, he will be navigated to it, else he should be navigated to group home page. (it should be configured on user preferences, if he wants to navigate to active order or always to group home page)
+on group home page user should see analytics (if has permission), orders history, and his balance with history.
+
+Group should have name, description, and can have logo.
+
+Each group has scope of restaurants, users with Restaurants Editor can add/edit/remove restaurants.
+Restaurant should have name, can have description.
+Restaurant can have a list of dishes with name, detail and price.
+
+Balances feature:
+Each person in group has group specific balance.
+Application doesn't have any payment system integration, it does only management part.
+So users in group with Editor role in Balances can apply adjustments to balances of other participants.
+It can be positive or negative with optional note, and when applied it should add record to balance history.
+When order is finished, balances should be updated and record t obalance history be added.
+
+Order feature:
+Each user with permission level Editor or Initiator can create new order.
+Participants can only add/edit/remove their dishes to order.
+Initiators can only initiate order, add own dishes to order and wait while perticipants add their dishes and then he can confirm or decline the order.
+Editors can add/edit/remove dishes to order even for other participants in any order.
+
+Each order dish that person adds should have name, detail and price.
+
+Order has lifecycle states:
+- Initiated: order is initiated by initiator, and is waiting for participants to add their dishes.
+- Confirmed: order is confirmed and becomes non editable, at this point initiator already orders from external source. At this point person that orders can manage packing/delivery fees. (add some amount of money to each order person or enter number that will be divided between all participants)
+- Ordered: all dishes are ordered and most likely paid.
+- Finished: order is finished, all dishes are delivered and paid. Once order goes to finished state, balances of all members are updated.
+- Cancelled: order is cancelled by initiator or by all participants.
+
+User can mark dish as favorite, and then it will be suggested to him when he enters new order from this restaurant.
+When user add position to order, he can select from favorite dishes or enter new one.
+
+Order position shouldn't have obligatory link to dish, it can be just name, detail and price. It is required for historical records.
+When order is finished, all existing dishes prices should be updated to current prices from order if different, and if new dished are added they should be stored.
+

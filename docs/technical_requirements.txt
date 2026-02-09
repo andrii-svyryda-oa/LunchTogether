@@ -1,0 +1,45 @@
+Backend:
+
+Python 3.12
+uv (manage project using pyproject.toml and uv tools)
+ruff (linting and formatting)
+ty (linter)
+
+sentry for error tracking
+
+FastAPI
+Pydantic
+SQLAlchemy
+Alembic
+PostgreSQL
+
+Azure blob storage tools
+
+Everything should be async.
+All dependencies (like database, workflows, repositories) should be injected using dependency injection.
+There should be base repository class that implements all the basic CRUD operations. Specific repositories should inherit from it and implement the specific operations.
+All business logic should be in workflows. Repositories should be injected into workflows. Workflows should be injected into endpoints.
+Workflows is a class that implements the business logic for a specific use case. Each Workflow should have pydantic input and output models.
+If endpoint should query database without any business logic, it should use repository directly.
+All endpoints should have pydantic models for request and response.
+
+Auth should be implemented using JWT in cookies.
+
+Frontend:
+
+typescript
+React
+Redux Toolkit for state management and api calls (injectEndpoints)
+shadcn/ui for components
+tailwindcss for styling
+react-router for routing
+
+Frontend should use modular architecture (separation of components by modules, and can be nested if needed). Constants, hooks, apis, slices - each type of file should have separate folder where all related files are stored.
+
+Deployment:
+
+Docker
+Docker Compose
+
+terraform for azure
+github actions for CI/CD
