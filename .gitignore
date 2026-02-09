@@ -9,7 +9,21 @@ dist/
 build/
 .venv/
 *.egg
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Node
+node_modules/
+*.tsbuildinfo
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+
+# Uploads
+uploads/
