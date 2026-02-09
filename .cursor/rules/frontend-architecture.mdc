@@ -1,0 +1,51 @@
+---
+description: Frontend modular architecture - where files belong and import rules
+globs: frontend/src/**
+alwaysApply: false
+---
+
+# Frontend Modular Architecture
+
+## Project Structure Rules
+
+**Global level** (`src/`):
+- `store/api/` — RTK Query APIs (extend `baseApi` via `injectEndpoints`)
+- `store/slices/` — Redux slices for client state
+- `types/` — Shared TypeScript types and interfaces
+- `constants/` — App-wide constants (routes, API endpoints, validation)
+- `hooks/` — Reusable hooks (useAuth, useAppSelector, useAppDispatch)
+- `utils/` — Utility functions (cn, validation schemas, formatters)
+- `components/ui/` — shadcn/ui primitives (managed by CLI)
+- `components/common/` — Shared layout and wrapper components
+
+**Module level** (`src/modules/<feature>/`):
+- `components/` — Feature-specific UI components
+- `pages/` — Route page components
+- `hooks/` — Module-specific hooks only (e.g., form logic)
+- `types/` — Module-specific types only (e.g., form types)
+
+## What does NOT go in a module
+
+APIs, slices, constants, general types, and reusable hooks belong at the global level.
+
+## Import Conventions
+
+Always use the `@/` path alias for global imports:
+
+```typescript
+import { useAuth } from '@/hooks';
+import { useLoginMutation } from '@/store/api/authApi';
+import { ROUTES } from '@/constants';
+import { User } from '@/types';
+import { cn } from '@/utils';
+```
+
+Use relative imports only within the same module:
+
+```typescript
+import { useLoginForm } from '../hooks/useLoginForm';
+```
+
+## Re-export Pattern
+
+Each global folder has an `index.ts` that re-exports its contents. Prefer importing from the barrel file for external consumers.

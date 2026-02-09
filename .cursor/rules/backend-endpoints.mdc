@@ -1,0 +1,26 @@
+---
+description: API endpoint conventions
+globs: backend/app/api/**/*.py
+alwaysApply: false
+---
+
+# API Endpoints
+
+- Each router file creates `router = APIRouter(prefix="/{resource}", tags=["{resource}"])`
+- All routers are included in `app/api/router.py` under the `/api` prefix
+- Every endpoint must specify `response_model` and use type hints for the return
+- Auth-protected endpoints use `Depends(get_current_user)`
+- Inject workflows/repositories from `app.dependencies`, never instantiate directly
+
+```python
+@router.post("/register", response_model=UserResponse, status_code=201)
+async def register(
+    data: UserCreate,
+    workflow: RegisterWorkflow = Depends(get_register_workflow),
+) -> UserResponse:
+    result = await workflow.execute(RegisterInput(data=data))
+    return result.user
+```
+
+- JWT auth uses HTTP-only cookies (`access_token`), set on login, cleared on logout
+- Pagination params: `page: int = Query(default=1, ge=1)`, `page_size: int = Query(default=20, ge=1, le=100)`

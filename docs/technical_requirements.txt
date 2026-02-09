@@ -13,7 +13,7 @@ SQLAlchemy
 Alembic
 PostgreSQL
 
-Azure blob storage tools
+Files should be stored in file storage.
 
 Everything should be async.
 All dependencies (like database, workflows, repositories) should be injected using dependency injection.
@@ -38,8 +38,9 @@ Frontend should use modular architecture (separation of components by modules, a
 
 Deployment:
 
-Docker
-Docker Compose
-
-terraform for azure
-github actions for CI/CD
+Everythin will be deployed on VPC machine, to which I have access via SSH.
+There should be one time script that will install everything required on machine (python, node, run database etc.) 
+There should be nginx to serve frontend and backend, and certbot to get SSL certificate.
+Script should have parameters which needed to be set up on machine.
+All services should be started as systemd services.
+github actions should build and deploy backend and frontend on merge and deploy via ssh and restart services.

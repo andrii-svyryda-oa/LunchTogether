@@ -1,0 +1,38 @@
+---
+description: Backend layered architecture and dependency injection patterns
+globs: backend/**/*.py
+alwaysApply: false
+---
+
+# Backend Architecture
+
+## Layer Structure
+
+```
+Endpoints (api/) → Workflows (workflows/) → Repositories (repositories/) → Database
+                 ↘ Repositories (directly, for simple queries)
+```
+
+## Dependency Injection
+
+All dependencies are injected via FastAPI `Depends()`. Factories live in `app/dependencies.py`.
+
+- Repository factories receive `AsyncSession` via `get_db`
+- Workflow factories receive repositories via their factory
+- Endpoints receive workflows or repositories via their factory
+
+```python
+# dependencies.py
+def get_user_repository(session: AsyncSession = Depends(get_db)) -> UserRepository:
+    return UserRepository(session)
+
+def get_register_workflow(
+    user_repository: UserRepository = Depends(get_user_repository),
+) -> RegisterWorkflow:
+    return RegisterWorkflow(user_repository)
+```
+
+## When to Use Workflows vs Repositories Directly
+
+- **Use workflow**: when there is business logic (validation, multi-step operations, side effects)
+- **Use repository directly**: when endpoint just queries data without business logic (list, get by id)

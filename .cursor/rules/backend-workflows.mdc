@@ -1,0 +1,33 @@
+---
+description: Workflow conventions for business logic
+globs: backend/app/workflows/**/*.py
+alwaysApply: false
+---
+
+# Workflows
+
+- Each workflow is a **separate file** under `workflows/{model}/` (e.g. `workflows/user/register.py`)
+- Each workflow file contains: `{Name}Input`, `{Name}Output` (Pydantic models), and `{Name}Workflow` (class)
+- Workflows receive repositories via constructor (dependency injection)
+- Single `async execute(self, input_data: Input) -> Output` method
+- All business logic lives here — never in endpoints or repositories
+
+```python
+# workflows/user/register.py
+class RegisterInput(BaseModel):
+    data: UserCreate
+
+class RegisterOutput(BaseModel):
+    user: UserResponse
+
+class RegisterWorkflow:
+    def __init__(self, user_repository: UserRepository):
+        self.user_repository = user_repository
+
+    async def execute(self, input_data: RegisterInput) -> RegisterOutput:
+        ...
+```
+
+When adding a new workflow:
+1. Create file in `workflows/{model}/{action}.py`
+2. Add factory function in `app/dependencies.py`

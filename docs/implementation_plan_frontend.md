@@ -33,21 +33,34 @@ frontend/
     │   └── env.ts                  # Environment configuration
     ├── store/
     │   ├── index.ts                # Redux store configuration
-    │   └── api/
-    │       └── baseApi.ts          # RTK Query base API
+    │   ├── api/
+    │   │   ├── baseApi.ts          # RTK Query base API
+    │   │   ├── authApi.ts          # Auth API endpoints
+    │   │   └── userApi.ts          # User API endpoints
+    │   └── slices/
+    │       ├── authSlice.ts        # Auth state slice
+    │       └── userSlice.ts        # User state slice
     ├── types/
-    │   ├── index.ts
-    │   └── models.ts               # Shared type definitions
+    │   ├── index.ts                # Re-export all types
+    │   ├── models.ts               # Shared type definitions
+    │   ├── api.ts                  # API request/response types
+    │   └── common.ts               # Common utility types
     ├── constants/
-    │   ├── index.ts
+    │   ├── index.ts                # Re-export all constants
     │   ├── routes.ts               # Route constants
-    │   └── api.ts                  # API endpoints constants
+    │   ├── api.ts                  # API endpoints constants
+    │   ├── validation.ts           # Validation messages and rules
+    │   └── app.ts                  # App-wide constants
     ├── hooks/
-    │   ├── index.ts
-    │   └── useAuth.ts              # Common hooks
+    │   ├── index.ts                # Re-export all hooks
+    │   ├── useAuth.ts              # Auth-related hooks
+    │   ├── useAppSelector.ts       # Typed Redux selector hook
+    │   ├── useAppDispatch.ts       # Typed Redux dispatch hook
+    │   └── useDebounce.ts          # Common utility hooks
     ├── utils/
     │   ├── index.ts
-    │   └── helpers.ts              # Utility functions
+    │   ├── helpers.ts              # Utility functions
+    │   └── validation.ts           # Validation helpers
     ├── components/
     │   ├── ui/                     # shadcn/ui components
     │   │   ├── button.tsx
@@ -72,32 +85,20 @@ frontend/
     │   │   ├── pages/
     │   │   │   ├── LoginPage.tsx
     │   │   │   └── RegisterPage.tsx
-    │   │   ├── api/
-    │   │   │   └── authApi.ts      # RTK Query endpoints
-    │   │   ├── slices/
-    │   │   │   └── authSlice.ts    # Redux slice
-    │   │   ├── hooks/
-    │   │   │   └── useAuthForm.ts
-    │   │   ├── types/
-    │   │   │   └── auth.types.ts
-    │   │   └── constants/
-    │   │       └── auth.constants.ts
+    │   │   ├── hooks/              # Module-specific hooks only
+    │   │   │   └── useLoginForm.ts # Form-specific hook
+    │   │   └── types/              # Module-specific types only
+    │   │       └── forms.ts        # Form-specific types
     │   └── user/
     │       ├── components/
     │       │   └── UserProfile.tsx
     │       ├── pages/
     │       │   ├── UserListPage.tsx
     │       │   └── UserDetailPage.tsx
-    │       ├── api/
-    │       │   └── userApi.ts
-    │       ├── slices/
-    │       │   └── userSlice.ts
-    │       ├── hooks/
-    │       │   └── useUserData.ts
-    │       ├── types/
-    │       │   └── user.types.ts
-    │       └── constants/
-    │           └── user.constants.ts
+    │       ├── hooks/              # Module-specific hooks only
+    │       │   └── useUserProfile.ts
+    │       └── types/              # Module-specific types only
+    │           └── profile.ts
     └── routes/
         └── index.tsx               # Route configuration
 ```
@@ -150,7 +151,7 @@ npm install @hookform/resolvers zod react-hook-form
 **Files to create**:
 - `.env.example`:
   ```env
-  VITE_API_BASE_URL=http://localhost:8000/api/v1
+  VITE_API_BASE_URL=http://localhost:8000/api
   VITE_APP_NAME=LunchTogether
   ```
 
@@ -165,7 +166,8 @@ npm install @hookform/resolvers zod react-hook-form
 - `src/store/index.ts`:
   - Create store with configureStore
   - Add middleware for RTK Query
-  - Export hooks (useAppDispatch, useAppSelector)
+  - Import and add all slices
+  - Export store, RootState, AppDispatch types
 
 - `src/store/api/baseApi.ts`:
   - Create base API with createApi
@@ -174,15 +176,30 @@ npm install @hookform/resolvers zod react-hook-form
   - Add global error handling
   - Configure tag types for cache invalidation
 
+- `src/hooks/useAppDispatch.ts`:
+  - Export typed useAppDispatch hook
+
+- `src/hooks/useAppSelector.ts`:
+  - Export typed useAppSelector hook
+
 ### 5. Type Definitions
 **Task**: Create shared TypeScript types
 
 **Files to create**:
 - `src/types/models.ts`:
-  - User type
-  - API response types
+  - User model type
+  - Other domain model types
+
+- `src/types/api.ts`:
+  - API response wrapper types
   - Pagination types
-  - Error types
+  - Error response types
+  - Request/response interfaces
+
+- `src/types/common.ts`:
+  - Common utility types (Optional, Nullable, etc.)
+  - Form types
+  - Component prop types
 
 - `src/types/index.ts`:
   - Re-export all types
@@ -196,9 +213,20 @@ npm install @hookform/resolvers zod react-hook-form
   - Route path constants (HOME, LOGIN, REGISTER, PROFILE, etc.)
 
 - `src/constants/api.ts`:
-  - API endpoint constants
+  - API endpoint paths
   - HTTP status codes
   - Common headers
+
+- `src/constants/validation.ts`:
+  - Validation error messages
+  - Password requirements
+  - Field length limits
+  - Regex patterns
+
+- `src/constants/app.ts`:
+  - App name
+  - Default values
+  - Feature flags
 
 - `src/constants/index.ts`:
   - Re-export all constants
@@ -211,6 +239,12 @@ npm install @hookform/resolvers zod react-hook-form
   - cn() function (clsx + tailwind-merge)
   - Date formatting helpers
   - String manipulation utilities
+  - Array/object helpers
+
+- `src/utils/validation.ts`:
+  - Email validation
+  - Password strength validation
+  - Generic validation helpers
 
 - `src/utils/index.ts`:
   - Re-export utilities
@@ -267,11 +301,32 @@ npx shadcn-ui@latest add dialog
   - Display fallback UI
   - Log errors to console/Sentry
 
-### 11. Auth Module - Types & Constants
-**Task**: Set up auth module structure
+### 11. Auth API & Slice - Global Level
+**Task**: Set up auth API and state management
 
 **Files to create**:
-- `src/modules/auth/types/auth.types.ts`:
+- `src/store/api/authApi.ts`:
+  - Inject endpoints into baseApi using `injectEndpoints`
+  - POST `/auth/register` mutation
+  - POST `/auth/login` mutation
+  - POST `/auth/logout` mutation
+  - GET `/auth/me` query
+  - Configure tag invalidation
+  - Export hooks (useLoginMutation, useRegisterMutation, etc.)
+
+**Type definitions** (add to existing global types):
+- `src/types/models.ts` - Add User interface:
+  ```typescript
+  export interface User {
+    id: string;
+    email: string;
+    full_name: string;
+    is_active: boolean;
+    created_at: string;
+  }
+  ```
+
+- `src/types/api.ts` - Add auth request/response types:
   ```typescript
   export interface LoginRequest {
     email: string;
@@ -284,68 +339,78 @@ npx shadcn-ui@latest add dialog
     full_name: string;
   }
   
-  export interface AuthUser {
-    id: string;
-    email: string;
-    full_name: string;
+  export interface AuthResponse {
+    user: User;
+    message?: string;
   }
   ```
 
-- `src/modules/auth/constants/auth.constants.ts`:
-  - Form validation messages
-  - Password requirements
-  - Auth error messages
-
-### 12. Auth Module - API
-**Task**: Create RTK Query endpoints for auth
-
-**Files to create**:
-- `src/modules/auth/api/authApi.ts`:
-  - Inject endpoints into baseApi using `injectEndpoints`
-  - POST `/auth/register` mutation
-  - POST `/auth/login` mutation
-  - POST `/auth/logout` mutation
-  - GET `/auth/me` query
-  - Configure tag invalidation
-
-### 13. Auth Module - Slice
+### 12. Auth Slice - Global Level
 **Task**: Create Redux slice for auth state
 
 **Files to create**:
-- `src/modules/auth/slices/authSlice.ts`:
-  - State: user, isAuthenticated, isLoading
-  - Reducers: setUser, clearUser
-  - Add matchers for authApi endpoints (login, logout)
-  - Export selectors (selectUser, selectIsAuthenticated)
+- `src/store/slices/authSlice.ts`:
+  - State: user (User | null), isAuthenticated (boolean), isLoading (boolean)
+  - Reducers: setUser, clearUser, setLoading
+  - Add matchers for authApi endpoints (login, logout, getCurrentUser)
+  - Export actions
+  - Export selectors (selectUser, selectIsAuthenticated, selectIsLoading)
 
-### 14. Auth Module - Hooks
-**Task**: Create custom hooks for auth
+### 13. Auth Hooks - Global Level
+**Task**: Create auth-related hooks
 
 **Files to create**:
-- `src/modules/auth/hooks/useAuthForm.ts`:
-  - Form validation using react-hook-form + zod
-  - Submit handlers
-  - Error handling
+- `src/hooks/useAuth.ts`:
+  - Combine auth selectors and mutations
+  - Export convenient auth operations
+  ```typescript
+  export const useAuth = () => {
+    const user = useAppSelector(selectUser);
+    const isAuthenticated = useAppSelector(selectIsAuthenticated);
+    const [login, { isLoading: isLoggingIn }] = useLoginMutation();
+    const [logout] = useLogoutMutation();
+    
+    return {
+      user,
+      isAuthenticated,
+      login,
+      logout,
+      isLoggingIn,
+    };
+  };
+  ```
 
-- `src/hooks/useAuth.ts` (global):
-  - Export auth selectors and mutations
-  - Convenience hook for auth operations
+### 14. Auth Module - Module-Specific Hooks
+**Task**: Create form-specific hooks
+
+**Files to create**:
+- `src/modules/auth/hooks/useLoginForm.ts`:
+  - Form validation using react-hook-form + zod
+  - Login-specific submit handler
+  - Error handling
+  - Success redirect logic
+
+- `src/modules/auth/hooks/useRegisterForm.ts` (optional, if logic differs):
+  - Register-specific form logic
+  - Different validation rules if needed
 
 ### 15. Auth Module - Components
 **Task**: Create auth UI components
 
 **Files to create**:
 - `src/modules/auth/components/LoginForm.tsx`:
-  - Email and password inputs
-  - Form validation
-  - Submit handler
+  - Use useLoginForm hook
+  - Email and password inputs (shadcn/ui)
+  - Form validation display
+  - Submit with loading state
   - Error display
   - Link to register page
 
 - `src/modules/auth/components/RegisterForm.tsx`:
+  - Use useRegisterForm hook (or useLoginForm if shared)
   - Email, password, full name inputs
-  - Form validation (password strength, email format)
-  - Submit handler
+  - Form validation display
+  - Submit with loading state
   - Error display
   - Link to login page
 
@@ -363,39 +428,72 @@ npx shadcn-ui@latest add dialog
   - Handle redirect after successful registration
   - Centered layout with Card component
 
-### 17. User Module - Types & API
-**Task**: Set up user module structure
+### 17. User API & Slice - Global Level
+**Task**: Set up user API and state management
 
 **Files to create**:
-- `src/modules/user/types/user.types.ts`:
-  - User type (import from shared types)
-  - UserListResponse type
-  - UserUpdateRequest type
-
-- `src/modules/user/api/userApi.ts`:
-  - GET `/users` query with pagination
+- `src/store/api/userApi.ts`:
+  - Inject endpoints into baseApi using `injectEndpoints`
+  - GET `/users` query with pagination params
   - GET `/users/{id}` query
   - PATCH `/users/{id}` mutation
-  - Use `injectEndpoints` pattern
+  - Configure cache tags
+  - Export hooks (useGetUsersQuery, useGetUserQuery, etc.)
+
+**Type definitions** (add to existing global types):
+- `src/types/api.ts` - Add user-related types:
+  ```typescript
+  export interface UserListParams {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }
+  
+  export interface UserListResponse {
+    users: User[];
+    total: number;
+    page: number;
+    limit: number;
+  }
+  
+  export interface UserUpdateRequest {
+    full_name?: string;
+    email?: string;
+  }
+  ```
+
+- `src/store/slices/userSlice.ts` (optional, only if you need client-side user state):
+  - State for selected user, filters, etc.
+  - Reducers for UI state management
+  - Export selectors
 
 ### 18. User Module - Components & Pages
 **Task**: Create user UI components
 
 **Files to create**:
+- `src/modules/user/hooks/useUserProfile.ts` (optional, module-specific):
+  - Profile editing logic
+  - Form state management
+  - Update mutation handling
+
 - `src/modules/user/components/UserProfile.tsx`:
   - Display user information
-  - Edit profile button
-  - Use Card component
+  - Edit mode toggle
+  - Save changes
+  - Use shadcn/ui Card component
 
 - `src/modules/user/pages/UserListPage.tsx`:
-  - Fetch and display users list
+  - Use useGetUsersQuery hook
+  - Display users in a list/table
   - Pagination controls
+  - Search functionality
   - Loading and error states
 
 - `src/modules/user/pages/UserDetailPage.tsx`:
-  - Fetch and display single user
-  - Use UserProfile component
+  - Use useGetUserQuery hook with userId from route params
+  - Render UserProfile component
   - Loading and error states
+  - Back to list navigation
 
 ### 19. Routing Configuration
 **Task**: Set up React Router
@@ -463,23 +561,29 @@ npm install -D vitest @testing-library/react @testing-library/jest-dom jsdom
 ## Environment Variables Required
 
 ```env
-VITE_API_BASE_URL=http://localhost:8000/api/v1
+VITE_API_BASE_URL=http://localhost:8000/api
 VITE_APP_NAME=LunchTogether
 ```
 
 ## Validation Checklist
 
-- [ ] All modules follow the defined structure (components, pages, api, slices, hooks, types, constants)
+- [ ] APIs are in `src/store/api/` (global level)
+- [ ] Slices are in `src/store/slices/` (global level)
+- [ ] Constants are in `src/constants/` (global level)
+- [ ] General hooks are in `src/hooks/` (global level)
+- [ ] Global types are in `src/types/` (global level)
+- [ ] Modules only contain: components, pages, and module-specific hooks/types
 - [ ] RTK Query uses `injectEndpoints` pattern
 - [ ] All API calls include credentials (cookies)
-- [ ] Redux state is properly typed
+- [ ] Redux state is properly typed with RootState and AppDispatch
+- [ ] useAppSelector and useAppDispatch hooks are typed
 - [ ] Protected routes redirect unauthenticated users
-- [ ] Forms have proper validation
+- [ ] Forms have proper validation (zod schemas)
 - [ ] Loading and error states are handled
 - [ ] shadcn/ui components are properly integrated
 - [ ] Tailwind CSS is working correctly
 - [ ] TypeScript has no errors
-- [ ] Path aliases are working
+- [ ] Path aliases are working (@/ for src/)
 
 ## Next Steps After Implementation
 
@@ -494,16 +598,44 @@ VITE_APP_NAME=LunchTogether
 ## Additional Considerations
 
 ### Code Organization Patterns
-- Each module is self-contained with its own types, API, state, and UI
-- Shared code goes in top-level folders (components/common, hooks, utils)
-- Constants and types are co-located with their modules
-- APIs use RTK Query's `injectEndpoints` to extend the base API
+- **Global Level**: APIs, slices, constants, general types, and reusable hooks live at the top level
+- **Module Level**: Only contains UI (components, pages) and module-specific hooks/types
+- Modules are organized by feature/domain (auth, user, etc.)
+- Shared UI components go in `components/common/`
+- shadcn/ui components go in `components/ui/`
+- Each module imports from global folders: `import { useAuth } from '@/hooks'`
 
 ### State Management Strategy
-- Use RTK Query for server state (data fetching, caching)
-- Use Redux slices for client state (auth status, UI state)
+- Use RTK Query for server state (data fetching, caching) - **APIs at global level**
+- Use Redux slices for client state (auth status, UI state) - **Slices at global level**
 - Minimize global state, prefer component state when possible
 - Use RTK Query's automatic cache invalidation with tags
+- All APIs extend baseApi using `injectEndpoints`
+
+### Module Guidelines
+**What goes in a module**:
+- Components (UI specific to that feature)
+- Pages (route components)
+- Module-specific hooks (e.g., `useLoginForm` for form logic)
+- Module-specific types (e.g., form types that aren't used elsewhere)
+
+**What does NOT go in a module**:
+- APIs (go in `src/store/api/`)
+- Slices (go in `src/store/slices/`)
+- Constants (go in `src/constants/`)
+- General types (go in `src/types/`)
+- Reusable hooks (go in `src/hooks/`)
+
+### Import Pattern Examples
+```typescript
+// In a module component
+import { useAuth } from '@/hooks';                    // From global hooks
+import { useLoginMutation } from '@/store/api';       // From global API
+import { selectUser } from '@/store/slices/authSlice'; // From global slice
+import { ROUTES } from '@/constants';                 // From global constants
+import { User } from '@/types';                       // From global types
+import { useLoginForm } from '../hooks/useLoginForm'; // Module-specific hook
+```
 
 ### Styling Approach
 - Use shadcn/ui components as building blocks

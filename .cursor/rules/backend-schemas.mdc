@@ -1,0 +1,15 @@
+---
+description: Pydantic schema conventions
+globs: backend/app/schemas/**/*.py
+alwaysApply: false
+---
+
+# Pydantic Schemas
+
+- All schemas inherit from `BaseSchema` (`app.schemas.base`) which sets `model_config = ConfigDict(from_attributes=True)`
+- Every endpoint must have explicit Pydantic request and response models
+- Naming convention: `{Model}Create`, `{Model}Update`, `{Model}Response`, `{Model}InDB`
+- Use `Field()` for validation constraints (min_length, max_length, ge, le)
+- Use `EmailStr` for email fields (requires `email-validator` package)
+- Use `model_dump(exclude_unset=True)` for partial updates
+- For paginated responses use `PaginatedResponse[T]` from `app.schemas.base`

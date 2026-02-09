@@ -1,0 +1,37 @@
+---
+description: TypeScript types and constants conventions for the frontend
+globs: frontend/src/{types,constants}/**
+alwaysApply: false
+---
+
+# Types & Constants Conventions
+
+## Types Organization
+
+| File | Contains |
+|------|----------|
+| `types/models.ts` | Domain model interfaces (User, Group, Order, etc.) |
+| `types/api.ts` | API request/response types, pagination types |
+| `types/common.ts` | Utility types (Nullable, WithChildren, AsyncStatus) |
+| `types/index.ts` | Re-exports everything |
+
+Rules:
+- Use `interface` for object shapes, `type` for unions/aliases
+- Use `import type` for type-only imports
+- Prefix API types with purpose: `LoginRequest`, `UserListResponse`
+- Module-specific types go in `modules/<feature>/types/`
+
+## Constants Organization
+
+| File | Contains |
+|------|----------|
+| `constants/routes.ts` | Route path strings |
+| `constants/api.ts` | API endpoint paths and tag type strings |
+| `constants/validation.ts` | Validation rules and messages |
+| `constants/app.ts` | App-wide config (name, page size, debounce) |
+| `constants/index.ts` | Re-exports everything |
+
+Rules:
+- Use `as const` on constant objects for literal types
+- API endpoint functions for parameterized paths: `DETAIL: (id: string) => /items/${id}`
+- Validation constants feed into zod schemas in `utils/validation.ts`

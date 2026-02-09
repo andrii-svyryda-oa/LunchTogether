@@ -1,0 +1,34 @@
+{
+  "recommendations": [
+    // Python
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "charliermarsh.ruff",
+
+    // JavaScript/TypeScript
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+
+    // React
+    "dsznajder.es7-react-js-snippets",
+
+    // Database
+    "mtxr.sqltools",
+    "mtxr.sqltools-driver-pg",
+
+    // Git
+    "eamodio.gitlens",
+
+    // Utilities
+    "editorconfig.editorconfig",
+    "mikestead.dotenv",
+    "streetsidesoftware.code-spell-checker",
+    "wayou.vscode-todo-highlight",
+
+    // Tailwind CSS
+    "bradlc.vscode-tailwindcss",
+
+    // REST Client
+    "humao.rest-client"
+  ]
+}

@@ -1,0 +1,82 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy Application
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            set -e
+
+            # Navigate to application directory
+            cd /var/www/lunchtogether
+
+            echo "Pulling latest code..."
+            sudo -u lunchtogether git fetch origin
+            sudo -u lunchtogether git reset --hard origin/main
+
+            echo "Deploying backend..."
+            cd backend
+            sudo -u lunchtogether /home/lunchtogether/.cargo/bin/uv sync
+            sudo -u lunchtogether /home/lunchtogether/.cargo/bin/uv run alembic upgrade head
+            sudo systemctl restart lunchtogether-backend
+
+            # Wait and check if backend started successfully
+            sleep 3
+            if ! systemctl is-active --quiet lunchtogether-backend; then
+              echo "Backend failed to start!"
+              sudo journalctl -u lunchtogether-backend -n 50
+              exit 1
+            fi
+
+            echo "Backend deployed successfully"
+
+            echo "Deploying frontend..."
+            cd ../frontend
+            sudo -u lunchtogether npm ci --production=false
+            sudo -u lunchtogether npm run build
+
+            echo "Reloading nginx..."
+            sudo nginx -t
+            sudo systemctl reload nginx
+
+            echo "Frontend deployed successfully"
+          ENDSSH
+
+      - name: Health Check
+        run: |
+          sleep 5
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ secrets.DOMAIN }}/api/health || true)
+          if [ "$response" = "200" ]; then
+            echo "Health check passed"
+          else
+            echo "Health check failed (HTTP $response)"
+            exit 1
+          fi
+
+      - name: Notify Deployment
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "Deployment successful!"
+          else
+            echo "Deployment failed!"
+          fi

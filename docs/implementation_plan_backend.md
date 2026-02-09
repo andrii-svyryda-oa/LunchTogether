@@ -14,7 +14,7 @@ This plan outlines the implementation of the basic backend structure using FastA
 - JWT authentication with cookies
 - Sentry for error tracking
 - ruff for linting and formatting
-- typer for CLI tools
+- ty for CLI linting
 
 ## Project Structure
 
@@ -33,7 +33,8 @@ backend/
 │   │   ├── __init__.py
 │   │   ├── security.py         # JWT and password hashing utilities
 │   │   ├── exceptions.py       # Custom exception classes
-│   │   └── middleware.py       # Custom middleware (error handling, etc.)
+│   │   ├── middleware.py       # Custom middleware (error handling, etc.)
+│   │   └── storage.py          # File storage utilities
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── base.py             # SQLAlchemy base model
@@ -48,14 +49,15 @@ backend/
 │   │   └── user.py             # User repository
 │   ├── workflows/
 │   │   ├── __init__.py
-│   │   └── user.py             # User workflows (registration, login, etc.)
+│   │   └── user/               # User-related workflows (one file per workflow)
+│   │       ├── __init__.py
+│   │       ├── register.py     # RegisterWorkflow (user registration)
+│   │       └── login.py        # LoginWorkflow (user login)
 │   └── api/
 │       ├── __init__.py
 │       ├── router.py           # Main API router
-│       └── v1/
-│           ├── __init__.py
-│           ├── auth.py         # Auth endpoints (login, logout, register)
-│           └── users.py        # User endpoints
+│       ├── auth.py             # Auth endpoints (login, logout, register)
+│       └── users.py            # User endpoints
 └── alembic/
     ├── versions/               # Migration files
     └── env.py                  # Alembic environment configuration
@@ -84,6 +86,7 @@ python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
 sentry-sdk[fastapi]
+aiofiles
 ```
 
 ### 2. Database Configuration
@@ -176,20 +179,31 @@ sentry-sdk[fastapi]
   - JWT token validation
   - Get current user dependency
 
+- `app/core/storage.py`:
+  - File upload handling (async)
+  - File download handling
+  - File deletion
+  - Generate unique file paths
+  - File size validation
+  - MIME type validation
+
 ### 10. User Workflows
 **Task**: Implement business logic for user operations
 
+Each workflow should be in a separate file. The workflows folder contains a subfolder per related model, with one workflow per file.
+
 **Files to create**:
-- `app/workflows/user.py`:
+- `app/workflows/user/register.py`:
   - `RegisterWorkflow`: Handle user registration
-    - Input: `UserCreate` schema
-    - Output: `UserResponse` schema
+    - Input: `RegisterInput` (wraps `UserCreate` schema)
+    - Output: `RegisterOutput` (wraps `UserResponse` schema)
     - Logic: Validate email uniqueness, hash password, create user
+- `app/workflows/user/login.py`:
   - `LoginWorkflow`: Handle user login
-    - Input: `UserLogin` schema
-    - Output: JWT token
+    - Input: `LoginInput` (wraps `UserLogin` schema)
+    - Output: `LoginOutput` (access token + `UserResponse`)
     - Logic: Verify credentials, generate token
-  - All workflows should receive repository via dependency injection
+- All workflows should receive repository via dependency injection
 
 ### 11. Dependency Injection Setup
 **Task**: Create dependency providers
@@ -205,20 +219,20 @@ sentry-sdk[fastapi]
 **Task**: Implement authentication endpoints
 
 **Files to create**:
-- `app/api/v1/auth.py`:
-  - POST `/auth/register`: User registration (inject RegisterWorkflow)
-  - POST `/auth/login`: User login (inject LoginWorkflow, set cookie)
-  - POST `/auth/logout`: User logout (clear cookie)
-  - GET `/auth/me`: Get current user (inject security dependency)
+- `app/api/auth.py`:
+  - POST `/api/auth/register`: User registration (inject RegisterWorkflow)
+  - POST `/api/auth/login`: User login (inject LoginWorkflow, set cookie)
+  - POST `/api/auth/logout`: User logout (clear cookie)
+  - GET `/api/auth/me`: Get current user (inject security dependency)
 
 ### 13. API Endpoints - Users
 **Task**: Implement user management endpoints
 
 **Files to create**:
-- `app/api/v1/users.py`:
-  - GET `/users/{user_id}`: Get user by ID (inject repository directly)
-  - GET `/users`: List users with pagination (inject repository directly)
-  - PATCH `/users/{user_id}`: Update user (inject workflow if needed)
+- `app/api/users.py`:
+  - GET `/api/users/{user_id}`: Get user by ID (inject repository directly)
+  - GET `/api/users`: List users with pagination (inject repository directly)
+  - PATCH `/api/users/{user_id}`: Update user (inject workflow if needed)
 
 ### 14. Main Application
 **Task**: Set up FastAPI application
@@ -234,7 +248,7 @@ sentry-sdk[fastapi]
 
 - `app/api/router.py`:
   - Create main API router
-  - Include v1 routers with prefix `/api/v1`
+  - Include auth and users routers with prefix `/api`
 
 ### 15. Database Migrations
 **Task**: Set up Alembic for migrations
@@ -281,6 +295,10 @@ DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/lunchtogether
 JWT_SECRET_KEY=your-secret-key-here
 JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# File Storage
+UPLOAD_DIR=/var/www/lunchtogether/uploads
+MAX_UPLOAD_SIZE=10485760  # 10MB in bytes
 
 # Sentry
 SENTRY_DSN=your-sentry-dsn

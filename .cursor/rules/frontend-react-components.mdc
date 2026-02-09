@@ -1,0 +1,61 @@
+---
+description: React component and form patterns for the frontend
+globs: frontend/**/*.tsx
+alwaysApply: false
+---
+
+# React Component Patterns
+
+## Component Style
+
+- Use named function exports, not default exports
+- Use functional components only (except ErrorBoundary)
+- Style with Tailwind utility classes via shadcn/ui components
+- Use `cn()` from `@/utils` for conditional class merging
+
+```tsx
+// ✅ GOOD
+export function UserCard({ user }: UserCardProps) {
+  return <Card className={cn("p-4", user.isActive && "border-green-500")}> ... </Card>;
+}
+
+// ❌ BAD
+export default function UserCard(props: any) { ... }
+```
+
+## Form Pattern
+
+Forms use react-hook-form + zod + shadcn Form components:
+
+1. Define zod schema in `@/utils/validation.ts` (reusable) or module-local
+2. Create a `use<Name>Form` hook in module `hooks/` that owns form state, submit logic, and error handling
+3. Component renders `<Form>`, `<FormField>`, `<FormControl>`, `<FormMessage>`
+
+```tsx
+// Hook returns: { form, onSubmit, serverError, isSubmitting }
+const { form, onSubmit, serverError, isSubmitting } = useLoginForm();
+
+<Form {...form}>
+  <form onSubmit={onSubmit}>
+    <FormField control={form.control} name="email" render={({ field }) => (
+      <FormItem>
+        <FormLabel>Email</FormLabel>
+        <FormControl><Input {...field} /></FormControl>
+        <FormMessage />
+      </FormItem>
+    )} />
+  </form>
+</Form>
+```
+
+## Loading & Error States
+
+Every data-fetching component must handle loading and error states:
+- Loading: spinner (`animate-spin rounded-full border-4 border-primary border-t-transparent`)
+- Error: `<Alert variant="destructive">` with message
+- Empty: centered muted text
+
+## Pages vs Components
+
+- **Pages** live in `modules/<feature>/pages/`, are route-level, and compose components
+- **Components** live in `modules/<feature>/components/`, are reusable within the module

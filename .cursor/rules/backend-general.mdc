@@ -1,0 +1,15 @@
+---
+description: General backend conventions for the LunchTogether FastAPI app
+globs: backend/**/*.py
+alwaysApply: false
+---
+
+# Backend General Conventions
+
+- Python 3.12, use modern syntax (`X | None` instead of `Optional[X]`, `list[str]` instead of `List[str]`)
+- Everything must be async — database operations, file I/O, endpoints
+- Use ruff for linting/formatting (line-length 120)
+- All backend code lives under `backend/` with application code in `backend/app/`
+- Use custom exceptions from `app.core.exceptions` — never raise raw `HTTPException` in business logic
+- Use `uuid.UUID` for all entity IDs
+- Imports should use absolute paths from `app` (e.g. `from app.models.user import User`)

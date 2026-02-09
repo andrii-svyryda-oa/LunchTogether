@@ -1,0 +1,58 @@
+---
+description: Redux Toolkit and RTK Query patterns for the frontend
+globs: frontend/src/store/**
+alwaysApply: false
+---
+
+# State Management Patterns
+
+## RTK Query APIs
+
+All API files live in `src/store/api/` and extend `baseApi` using `injectEndpoints`:
+
+```typescript
+import { baseApi } from "./baseApi";
+import { API_ENDPOINTS } from "@/constants";
+
+export const featureApi = baseApi.injectEndpoints({
+  endpoints: (builder) => ({
+    getItems: builder.query<ItemResponse, QueryParams>({
+      query: (params) => ({ url: API_ENDPOINTS.FEATURE.LIST, params }),
+      providesTags: (result) =>
+        result
+          ? [...result.items.map(({ id }) => ({ type: "Feature" as const, id })),
+             { type: "Feature" as const, id: "LIST" }]
+          : [{ type: "Feature" as const, id: "LIST" }],
+    }),
+    createItem: builder.mutation<Item, CreateRequest>({
+      query: (data) => ({ url: API_ENDPOINTS.FEATURE.LIST, method: "POST", body: data }),
+      invalidatesTags: [{ type: "Feature", id: "LIST" }],
+    }),
+  }),
+});
+
+export const { useGetItemsQuery, useCreateItemMutation } = featureApi;
+```
+
+Key rules:
+- Use `"Feature" as const` in tag objects (not variable references with `as const`)
+- Register new tag types in `baseApi.ts` `tagTypes` array
+- All requests include credentials (cookies) via `baseApi` config
+- Request/response types come from `@/types`
+- API endpoint paths come from `@/constants/api.ts`
+
+## Redux Slices
+
+Slices are for client-side UI state only (filters, selections, UI toggles). Server data is managed by RTK Query cache.
+
+Use `extraReducers` with `addMatcher` to react to API lifecycle events:
+
+```typescript
+builder.addMatcher(featureApi.endpoints.action.matchFulfilled, (state, action) => {
+  // update client state based on API result
+});
+```
+
+## Typed Hooks
+
+Always use `useAppSelector` and `useAppDispatch` from `@/hooks` — never bare `useSelector`/`useDispatch`.

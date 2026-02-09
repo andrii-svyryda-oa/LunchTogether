@@ -1,0 +1,33 @@
+[Unit]
+Description=LunchTogether Backend Service
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=APP_USER_PLACEHOLDER
+Group=www-data
+WorkingDirectory=APP_DIR_PLACEHOLDER/backend
+EnvironmentFile=APP_DIR_PLACEHOLDER/backend/.env
+
+# Run migrations before starting
+ExecStartPre=/home/APP_USER_PLACEHOLDER/.cargo/bin/uv run alembic upgrade head
+
+# Start the application
+ExecStart=/home/APP_USER_PLACEHOLDER/.cargo/bin/uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 4
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lunchtogether-backend
+
+[Install]
+WantedBy=multi-user.target
