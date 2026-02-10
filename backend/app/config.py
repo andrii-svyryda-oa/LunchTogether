@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     environment: str = "development"
 
     # Database
-    database_url: str = "postgresql+asyncpg://user:password@localhost:5432/lunchtogether"
+    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/lunchtogether"
 
     # JWT
     jwt_secret_key: str = "your-secret-key-here"
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     sentry_dsn: str = ""
 
     # CORS
-    cors_origins: list[str] = ["http://localhost:3000"]
+    cors_origins: list[str] = ["http://localhost:5173"]
 
     @property
     def is_development(self) -> bool:

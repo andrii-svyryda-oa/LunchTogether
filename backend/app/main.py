@@ -32,7 +32,11 @@ def create_app() -> FastAPI:
         redoc_url="/api/redoc" if settings.is_development else None,
     )
 
-    # CORS
+    # Custom middleware (added first = innermost, runs after CORS)
+    app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(ErrorHandlingMiddleware)
+
+    # CORS (added last = outermost, intercepts preflight OPTIONS before anything else)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -40,10 +44,6 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-    # Custom middleware
-    app.add_middleware(RequestLoggingMiddleware)
-    app.add_middleware(ErrorHandlingMiddleware)
 
     # Include routers
     app.include_router(api_router)

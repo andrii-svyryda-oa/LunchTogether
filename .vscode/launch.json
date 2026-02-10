@@ -2,8 +2,9 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Backend: Debug",
-      "type": "python",
+      "name": "Local",
+      "consoleName": "Local",
+      "type": "debugpy",
       "request": "launch",
       "module": "uvicorn",
       "args": [
@@ -11,59 +12,12 @@
         "--host",
         "0.0.0.0",
         "--port",
-        "8000",
-        "--reload"
+        "8000"
       ],
+      "pythonPath": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
       "cwd": "${workspaceFolder}/backend",
-      "envFile": "${workspaceFolder}/backend/.env",
-      "console": "integratedTerminal",
-      "justMyCode": false,
-      "gevent": false
-    },
-    {
-      "name": "Backend: Debug Tests",
-      "type": "python",
-      "request": "launch",
-      "module": "pytest",
-      "args": [
-        "-v",
-        "-s"
-      ],
-      "cwd": "${workspaceFolder}/backend",
-      "envFile": "${workspaceFolder}/backend/.env",
-      "console": "integratedTerminal",
-      "justMyCode": false
-    },
-    {
-      "name": "Frontend: Debug Chrome",
-      "type": "chrome",
-      "request": "launch",
-      "url": "http://localhost:3000",
-      "webRoot": "${workspaceFolder}/frontend/src",
-      "sourceMapPathOverrides": {
-        "webpack:///src/*": "${webRoot}/*"
-      }
-    },
-    {
-      "name": "Frontend: Debug Edge",
-      "type": "msedge",
-      "request": "launch",
-      "url": "http://localhost:3000",
-      "webRoot": "${workspaceFolder}/frontend/src",
-      "sourceMapPathOverrides": {
-        "webpack:///src/*": "${webRoot}/*"
-      }
-    }
-  ],
-  "compounds": [
-    {
-      "name": "Full Stack: Debug",
-      "configurations": [
-        "Backend: Debug",
-        "Frontend: Debug Chrome"
-      ],
-      "stopAll": true,
-      "preLaunchTask": "Check Services"
+      "justMyCode": true,
+      "jinja": true
     }
   ]
 }
