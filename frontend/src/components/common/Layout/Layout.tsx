@@ -10,7 +10,7 @@ export function Layout() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
       <div className="flex flex-1">
@@ -24,7 +24,7 @@ export function Layout() {
         <main
           className={`flex-1 ${isAuthenticated ? "md:ml-64" : ""}`}
         >
-          <div className="container mx-auto p-6">
+          <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-7xl animate-fade-in">
             <Outlet />
           </div>
         </main>

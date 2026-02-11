@@ -17,6 +17,7 @@ import {
   setCurrentPage,
   setSearchQuery,
 } from "@/store/slices/userSlice";
+import { cn } from "@/utils";
 import { formatDate } from "@/utils";
 import {
   AlertCircle,
@@ -26,6 +27,20 @@ import {
   User,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+
+const AVATAR_GRADIENTS = [
+  "from-orange-500 to-amber-500",
+  "from-blue-500 to-indigo-500",
+  "from-emerald-500 to-teal-500",
+  "from-purple-500 to-violet-500",
+  "from-pink-500 to-rose-500",
+  "from-cyan-500 to-sky-500",
+];
+
+function getAvatarGradient(name: string): string {
+  const index = (name ?? "?").charCodeAt(0) % AVATAR_GRADIENTS.length;
+  return AVATAR_GRADIENTS[index];
+}
 
 export function UserListPage() {
   const dispatch = useAppDispatch();
@@ -42,10 +57,10 @@ export function UserListPage() {
   const totalPages = data?.total_pages ?? 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-slide-up">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground mt-1">
           Browse and manage registered users.
         </p>
       </div>
@@ -70,26 +85,31 @@ export function UserListPage() {
       )}
 
       {isLoading && (
-        <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="flex justify-center py-20">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
       )}
 
       {data && (
         <>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {data.items.map((user) => (
               <Link key={user.id} to={`/users/${user.id}`}>
-                <Card className="transition-shadow hover:shadow-md">
+                <Card className="hover:shadow-md hover:border-primary/30 cursor-pointer group">
                   <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                      <User className="h-5 w-5 text-primary" />
+                    <div
+                      className={cn(
+                        "flex h-11 w-11 items-center justify-center rounded-full bg-linear-to-br text-white font-bold text-sm shrink-0 group-hover:scale-105 transition-transform",
+                        getAvatarGradient(user.full_name),
+                      )}
+                    >
+                      {user.full_name.charAt(0).toUpperCase()}
                     </div>
-                    <div>
-                      <CardTitle className="text-base">
+                    <div className="min-w-0">
+                      <CardTitle className="text-base truncate">
                         {user.full_name}
                       </CardTitle>
-                      <CardDescription className="text-xs">
+                      <CardDescription className="text-xs truncate">
                         {user.email}
                       </CardDescription>
                     </div>
@@ -105,9 +125,14 @@ export function UserListPage() {
           </div>
 
           {data.items.length === 0 && (
-            <div className="py-12 text-center text-muted-foreground">
-              No users found.
-            </div>
+            <Card className="flex flex-col items-center justify-center py-16 border-dashed">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted mb-4">
+                <User className="h-7 w-7 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground font-medium">
+                No users found.
+              </p>
+            </Card>
           )}
 
           {totalPages > 1 && (
@@ -117,11 +142,12 @@ export function UserListPage() {
                 size="sm"
                 onClick={() => dispatch(setCurrentPage(currentPage - 1))}
                 disabled={currentPage <= 1}
+                className="rounded-full"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
               </Button>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-muted-foreground px-3">
                 Page {currentPage} of {totalPages}
               </span>
               <Button
@@ -129,6 +155,7 @@ export function UserListPage() {
                 size="sm"
                 onClick={() => dispatch(setCurrentPage(currentPage + 1))}
                 disabled={currentPage >= totalPages}
+                className="rounded-full"
               >
                 Next
                 <ChevronRight className="h-4 w-4" />

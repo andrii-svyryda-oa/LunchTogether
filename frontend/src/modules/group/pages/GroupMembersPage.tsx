@@ -18,9 +18,24 @@ import {
   useUpdateGroupMemberMutation,
 } from "@/store/api/groupApi";
 import { GROUP_ROLES } from "@/types";
-import { Plus, UserMinus } from "lucide-react";
+import { cn } from "@/utils";
+import { Plus, UserMinus, Users } from "lucide-react";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+
+const AVATAR_GRADIENTS = [
+  "from-orange-500 to-amber-500",
+  "from-blue-500 to-indigo-500",
+  "from-emerald-500 to-teal-500",
+  "from-purple-500 to-violet-500",
+  "from-pink-500 to-rose-500",
+  "from-cyan-500 to-sky-500",
+];
+
+function getAvatarGradient(name: string): string {
+  const index = (name ?? "?").charCodeAt(0) % AVATAR_GRADIENTS.length;
+  return AVATAR_GRADIENTS[index];
+}
 
 export function GroupMembersPage() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -59,7 +74,7 @@ export function GroupMembersPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center py-20">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
@@ -68,12 +83,17 @@ export function GroupMembersPage() {
   const isOwner = group?.owner_id === user?.id;
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Members</h1>
+    <div className="animate-slide-up">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Members</h1>
+          <p className="text-muted-foreground mt-1">
+            {members?.length ?? 0} members in this group
+          </p>
+        </div>
         <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="shadow-md shadow-primary/20">
               <Plus className="mr-2 h-4 w-4" />
               Invite
             </Button>
@@ -83,7 +103,7 @@ export function GroupMembersPage() {
               <DialogTitle>Invite Member</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
-              <div>
+              <div className="space-y-2">
                 <Label>Email</Label>
                 <Input
                   value={inviteEmail}
@@ -91,12 +111,12 @@ export function GroupMembersPage() {
                   placeholder="colleague@example.com"
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label>Role</Label>
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   {GROUP_ROLES.map((r) => (
                     <option key={r} value={r}>
@@ -117,76 +137,91 @@ export function GroupMembersPage() {
         </Dialog>
       </div>
 
-      <div className="space-y-3">
-        {members?.map((member) => {
-          const memberIsOwner = member.user_id === group?.owner_id;
-          return (
-            <Card key={member.id} className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                    {(member.user_full_name ?? "?").charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="font-medium">
-                      {member.user_full_name}
-                      {memberIsOwner && (
-                        <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                          Owner
-                        </span>
+      {members && members.length === 0 ? (
+        <Card className="flex flex-col items-center justify-center py-16 border-dashed">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted mb-4">
+            <Users className="h-7 w-7 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground font-medium">No members yet</p>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {members?.map((member) => {
+            const memberIsOwner = member.user_id === group?.owner_id;
+            return (
+              <Card key={member.id} className="p-4 hover:shadow-md">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        "flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br text-white font-bold text-sm shrink-0",
+                        getAvatarGradient(member.user_full_name ?? "?"),
                       )}
-                      {member.user_id === user?.id && (
-                        <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                          You
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {member.user_email}
-                    </p>
+                    >
+                      {(member.user_full_name ?? "?").charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium">{member.user_full_name}</p>
+                        {memberIsOwner && (
+                          <span className="text-[11px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                            Owner
+                          </span>
+                        )}
+                        {member.user_id === user?.id && (
+                          <span className="text-[11px] font-medium bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                            You
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {member.user_email}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-xs text-muted-foreground space-x-2 hidden md:block">
-                    <span>M:{member.members_scope}</span>
-                    <span>O:{member.orders_scope}</span>
-                    <span>B:{member.balances_scope}</span>
-                    <span>A:{member.analytics_scope}</span>
-                    <span>R:{member.restaurants_scope}</span>
-                  </div>
-                  {!memberIsOwner && (isOwner || user?.is_admin) && (
-                    <>
-                      <select
-                        onChange={(e) =>
-                          handleRoleChange(member.user_id, e.target.value)
-                        }
-                        className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                        defaultValue=""
-                      >
-                        <option value="" disabled>
-                          Change role
-                        </option>
-                        {GROUP_ROLES.map((r) => (
-                          <option key={r} value={r}>
-                            {r.replace("_", " ")}
+                  <div className="flex items-center gap-2">
+                    <div className="text-[11px] text-muted-foreground space-x-1.5 hidden lg:flex">
+                      <span className="bg-muted px-1.5 py-0.5 rounded">M:{member.members_scope}</span>
+                      <span className="bg-muted px-1.5 py-0.5 rounded">O:{member.orders_scope}</span>
+                      <span className="bg-muted px-1.5 py-0.5 rounded">B:{member.balances_scope}</span>
+                      <span className="bg-muted px-1.5 py-0.5 rounded">A:{member.analytics_scope}</span>
+                      <span className="bg-muted px-1.5 py-0.5 rounded">R:{member.restaurants_scope}</span>
+                    </div>
+                    {!memberIsOwner && (isOwner || user?.is_admin) && (
+                      <>
+                        <select
+                          onChange={(e) =>
+                            handleRoleChange(member.user_id, e.target.value)
+                          }
+                          className="h-8 rounded-lg border border-input bg-background px-2 text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
+                          defaultValue=""
+                        >
+                          <option value="" disabled>
+                            Change role
                           </option>
-                        ))}
-                      </select>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemove(member.user_id)}
-                      >
-                        <UserMinus className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </>
-                  )}
+                          {GROUP_ROLES.map((r) => (
+                            <option key={r} value={r}>
+                              {r.replace("_", " ")}
+                            </option>
+                          ))}
+                        </select>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemove(member.user_id)}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <UserMinus className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

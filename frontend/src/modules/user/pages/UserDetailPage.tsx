@@ -13,15 +13,15 @@ export function UserDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="flex justify-center py-20">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
   }
 
   if (error || !user) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 animate-slide-up">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
@@ -37,8 +37,12 @@ export function UserDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <Button variant="ghost" onClick={() => navigate(ROUTES.USERS)}>
+    <div className="space-y-6 animate-slide-up">
+      <Button
+        variant="ghost"
+        onClick={() => navigate(ROUTES.USERS)}
+        className="text-muted-foreground"
+      >
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Users
       </Button>

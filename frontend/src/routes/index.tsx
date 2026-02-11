@@ -22,9 +22,22 @@ import { UserListPage } from "@/modules/user/pages/UserListPage";
 
 function NotFoundPage() {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-      <h1 className="text-6xl font-bold text-muted-foreground">404</h1>
-      <p className="mt-4 text-lg text-muted-foreground">Page not found</p>
+    <div className="flex min-h-[60vh] flex-col items-center justify-center text-center animate-fade-in">
+      <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-muted mb-6">
+        <span className="text-4xl font-bold text-muted-foreground">?</span>
+      </div>
+      <h1 className="text-5xl font-bold bg-linear-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent mb-3">
+        404
+      </h1>
+      <p className="text-lg text-muted-foreground mb-6">
+        Oops! This page doesn&apos;t exist.
+      </p>
+      <a
+        href="/"
+        className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-colors"
+      >
+        Go Home
+      </a>
     </div>
   );
 }

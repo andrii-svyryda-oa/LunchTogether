@@ -15,9 +15,24 @@ import {
   useCreateGroupMutation,
   useGetGroupsQuery,
 } from "@/store/api/groupApi";
-import { Plus } from "lucide-react";
+import { cn } from "@/utils";
+import { ArrowRight, Plus, Users } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+
+const GROUP_GRADIENTS = [
+  "from-orange-500 to-amber-500",
+  "from-blue-500 to-indigo-500",
+  "from-emerald-500 to-teal-500",
+  "from-purple-500 to-violet-500",
+  "from-pink-500 to-rose-500",
+  "from-cyan-500 to-sky-500",
+];
+
+function getGroupGradient(name: string): string {
+  const index = name.charCodeAt(0) % GROUP_GRADIENTS.length;
+  return GROUP_GRADIENTS[index];
+}
 
 export function GroupListPage() {
   const { data: groups, isLoading, error } = useGetGroupsQuery();
@@ -43,7 +58,7 @@ export function GroupListPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center py-20">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
@@ -54,12 +69,17 @@ export function GroupListPage() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">My Groups</h1>
+    <div className="animate-slide-up">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">My Groups</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage your lunch groups and create new ones.
+          </p>
+        </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="shadow-md shadow-primary/20">
               <Plus className="mr-2 h-4 w-4" />
               Create Group
             </Button>
@@ -69,7 +89,7 @@ export function GroupListPage() {
               <DialogTitle>Create New Group</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="group-name">Name</Label>
                 <Input
                   id="group-name"
@@ -78,7 +98,7 @@ export function GroupListPage() {
                   placeholder="Lunch crew"
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="group-desc">Description (optional)</Label>
                 <Input
                   id="group-desc"
@@ -100,32 +120,44 @@ export function GroupListPage() {
       </div>
 
       {groups && groups.length === 0 ? (
-        <p className="text-center text-muted-foreground py-12">
-          You don't belong to any groups yet. Create one to get started!
-        </p>
+        <Card className="flex flex-col items-center justify-center py-16 border-dashed">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted mb-4">
+            <Users className="h-7 w-7 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground font-medium mb-1">No groups yet</p>
+          <p className="text-sm text-muted-foreground">
+            Create one to get started ordering lunch together!
+          </p>
+        </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {groups?.map((group) => (
             <Link key={group.id} to={`/groups/${group.id}`}>
-              <Card className="p-6 hover:border-primary transition-colors cursor-pointer">
+              <Card className="p-5 hover:shadow-md hover:border-primary/30 cursor-pointer group">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                  <div
+                    className={cn(
+                      "flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br text-white font-bold text-lg shrink-0 group-hover:scale-105 transition-transform shadow-sm",
+                      getGroupGradient(group.name),
+                    )}
+                  >
                     {group.name.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <h3 className="font-semibold">{group.name}</h3>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold truncate">{group.name}</h3>
                     {group.description && (
                       <p className="text-sm text-muted-foreground line-clamp-1">
                         {group.description}
                       </p>
                     )}
+                    {group.owner_id === user?.id && (
+                      <span className="mt-1.5 inline-block text-[11px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                        Owner
+                      </span>
+                    )}
                   </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                {group.owner_id === user?.id && (
-                  <span className="mt-3 inline-block text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                    Owner
-                  </span>
-                )}
               </Card>
             </Link>
           ))}

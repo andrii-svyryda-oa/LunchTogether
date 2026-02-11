@@ -16,9 +16,23 @@ import {
   useGetBalancesQuery,
 } from "@/store/api/balanceApi";
 import { cn } from "@/utils";
-import { History, Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, History, Plus, Wallet } from "lucide-react";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+
+const AVATAR_GRADIENTS = [
+  "from-orange-500 to-amber-500",
+  "from-blue-500 to-indigo-500",
+  "from-emerald-500 to-teal-500",
+  "from-purple-500 to-violet-500",
+  "from-pink-500 to-rose-500",
+  "from-cyan-500 to-sky-500",
+];
+
+function getAvatarGradient(name: string): string {
+  const index = (name ?? "?").charCodeAt(0) % AVATAR_GRADIENTS.length;
+  return AVATAR_GRADIENTS[index];
+}
 
 export function BalancesPage() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -60,19 +74,24 @@ export function BalancesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center py-20">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Balances</h1>
+    <div className="animate-slide-up">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Balances</h1>
+          <p className="text-muted-foreground mt-1">
+            Track who owes what in this group.
+          </p>
+        </div>
         <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="shadow-md shadow-primary/20">
               <Plus className="mr-2 h-4 w-4" />
               Adjust Balance
             </Button>
@@ -82,12 +101,12 @@ export function BalancesPage() {
               <DialogTitle>Adjust Balance</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
-              <div>
+              <div className="space-y-2">
                 <Label>Member</Label>
                 <select
                   value={adjustUserId}
                   onChange={(e) => setAdjustUserId(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <option value="">Select member</option>
                   {balances?.map((b) => (
@@ -97,7 +116,7 @@ export function BalancesPage() {
                   ))}
                 </select>
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label>Amount (positive to add, negative to subtract)</Label>
                 <Input
                   type="number"
@@ -107,7 +126,7 @@ export function BalancesPage() {
                   placeholder="10.00"
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label>Note (optional)</Label>
                 <Input
                   value={adjustNote}
@@ -128,95 +147,141 @@ export function BalancesPage() {
       </div>
 
       {/* Balance list */}
-      <div className="space-y-3 mb-8">
-        {balances?.map((balance) => (
-          <Card key={balance.id} className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">{balance.user_full_name}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span
-                  className={cn(
-                    "text-lg font-bold",
-                    Number(balance.amount) >= 0
-                      ? "text-green-600"
-                      : "text-red-600",
-                  )}
-                >
-                  ${Number(balance.amount).toFixed(2)}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() =>
-                    setHistoryUserId(
-                      historyUserId === balance.user_id
-                        ? null
-                        : balance.user_id,
-                    )
-                  }
-                >
-                  <History className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Inline history */}
-            {historyUserId === balance.user_id && history && (
-              <div className="mt-4 border-t pt-4 space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">
-                  History
-                </p>
-                {history.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No history yet.
-                  </p>
-                ) : (
-                  history.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <div>
-                        <span className="font-medium">
-                          {entry.change_type === "order" ? "Order" : "Manual"}
-                        </span>
-                        {entry.note && (
-                          <span className="text-muted-foreground ml-2">
-                            {entry.note}
-                          </span>
+      {balances && balances.length === 0 ? (
+        <Card className="flex flex-col items-center justify-center py-16 border-dashed">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted mb-4">
+            <Wallet className="h-7 w-7 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground font-medium">No balances yet</p>
+        </Card>
+      ) : (
+        <div className="space-y-3 mb-8">
+          {balances?.map((balance) => {
+            const isExpanded = historyUserId === balance.user_id;
+            return (
+              <Card
+                key={balance.id}
+                className={cn("hover:shadow-md", isExpanded && "shadow-md")}
+              >
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={cn(
+                          "flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br text-white text-sm font-bold shrink-0",
+                          getAvatarGradient(balance.user_full_name ?? "?"),
                         )}
-                        {entry.created_by_name && (
-                          <span className="text-muted-foreground ml-2">
-                            by {entry.created_by_name}
-                          </span>
-                        )}
+                      >
+                        {(balance.user_full_name ?? "?")
+                          .charAt(0)
+                          .toUpperCase()}
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={cn(
-                            "font-medium",
-                            Number(entry.amount) >= 0
-                              ? "text-green-600"
-                              : "text-red-600",
-                          )}
-                        >
-                          {Number(entry.amount) >= 0 ? "+" : ""}$
-                          {Number(entry.amount).toFixed(2)}
-                        </span>
-                        <span className="text-muted-foreground">
-                          = ${Number(entry.balance_after).toFixed(2)}
-                        </span>
+                      <div>
+                        <p className="font-medium">{balance.user_full_name}</p>
+                        {balance.user_id === user?.id && (
+                          <span className="text-[11px] font-medium bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                            You
+                          </span>
+                        )}
                       </div>
                     </div>
-                  ))
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={cn(
+                          "text-lg font-bold",
+                          Number(balance.amount) >= 0
+                            ? "text-emerald-600"
+                            : "text-red-600",
+                        )}
+                      >
+                        ${Number(balance.amount).toFixed(2)}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          setHistoryUserId(isExpanded ? null : balance.user_id)
+                        }
+                        className="text-muted-foreground"
+                      >
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <History className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Inline history */}
+                {isExpanded && history && (
+                  <div className="border-t px-4 py-4 bg-muted/30">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                      History
+                    </p>
+                    {history.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No history yet.
+                      </p>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {history.map((entry) => (
+                          <div
+                            key={entry.id}
+                            className="flex items-center justify-between text-sm"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={cn(
+                                  "text-[11px] font-medium px-2 py-0.5 rounded-full",
+                                  entry.change_type === "order"
+                                    ? "bg-blue-50 text-blue-600"
+                                    : "bg-amber-50 text-amber-600",
+                                )}
+                              >
+                                {entry.change_type === "order"
+                                  ? "Order"
+                                  : "Manual"}
+                              </span>
+                              {entry.note && (
+                                <span className="text-muted-foreground">
+                                  {entry.note}
+                                </span>
+                              )}
+                              {entry.created_by_name && (
+                                <span className="text-muted-foreground">
+                                  by {entry.created_by_name}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 shrink-0">
+                              <span
+                                className={cn(
+                                  "font-medium",
+                                  Number(entry.amount) >= 0
+                                    ? "text-emerald-600"
+                                    : "text-red-600",
+                                )}
+                              >
+                                {Number(entry.amount) >= 0 ? "+" : ""}$
+                                {Number(entry.amount).toFixed(2)}
+                              </span>
+                              <span className="text-muted-foreground text-xs">
+                                = ${Number(entry.balance_after).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
-              </div>
-            )}
-          </Card>
-        ))}
-      </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

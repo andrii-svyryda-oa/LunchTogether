@@ -19,16 +19,16 @@ import {
   useUpdateOrderStatusMutation,
 } from "@/store/api/orderApi";
 import { cn } from "@/utils";
-import { DollarSign, Plus, Trash2 } from "lucide-react";
+import { DollarSign, Plus, ShoppingCart, Trash2, Truck, Users } from "lucide-react";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 
-const STATUS_COLORS: Record<string, string> = {
-  initiated: "bg-blue-100 text-blue-700",
-  confirmed: "bg-yellow-100 text-yellow-700",
-  ordered: "bg-purple-100 text-purple-700",
-  finished: "bg-green-100 text-green-700",
-  cancelled: "bg-red-100 text-red-700",
+const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
+  initiated: { bg: "bg-blue-50", text: "text-blue-700", dot: "bg-blue-500" },
+  confirmed: { bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-500" },
+  ordered: { bg: "bg-purple-50", text: "text-purple-700", dot: "bg-purple-500" },
+  finished: { bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500" },
+  cancelled: { bg: "bg-red-50", text: "text-red-700", dot: "bg-red-500" },
 };
 
 const NEXT_STATUS: Record<string, { label: string; status: string }> = {
@@ -36,6 +36,20 @@ const NEXT_STATUS: Record<string, { label: string; status: string }> = {
   confirmed: { label: "Mark as Ordered", status: "ordered" },
   ordered: { label: "Mark as Finished", status: "finished" },
 };
+
+const AVATAR_GRADIENTS = [
+  "from-orange-500 to-amber-500",
+  "from-blue-500 to-indigo-500",
+  "from-emerald-500 to-teal-500",
+  "from-purple-500 to-violet-500",
+  "from-pink-500 to-rose-500",
+  "from-cyan-500 to-sky-500",
+];
+
+function getAvatarGradient(name: string): string {
+  const index = (name ?? "?").charCodeAt(0) % AVATAR_GRADIENTS.length;
+  return AVATAR_GRADIENTS[index];
+}
 
 export function OrderDetailPage() {
   const { groupId, orderId } = useParams<{
@@ -116,7 +130,7 @@ export function OrderDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center py-20">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
@@ -130,66 +144,91 @@ export function OrderDetailPage() {
   const canEdit = order.status === "initiated";
   const canManage = isInitiator || user?.is_admin;
   const nextAction = NEXT_STATUS[order.status];
+  const style = STATUS_STYLES[order.status] ?? STATUS_STYLES.initiated;
 
   // Group items by user
-  const itemsByUser = order.items.reduce((acc, item) => {
-    const key = item.user_full_name ?? item.user_id;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(item);
-    return acc;
-  }, {} as Record<string, typeof order.items>);
+  const itemsByUser = order.items.reduce(
+    (acc, item) => {
+      const key = item.user_full_name ?? item.user_id;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    },
+    {} as Record<string, typeof order.items>,
+  );
 
   return (
-    <div>
+    <div className="animate-slide-up">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {order.restaurant_name ?? "Custom Order"}
-          </h1>
+          <div className="flex items-center gap-3 mb-1">
+            <h1 className="text-3xl font-bold tracking-tight">
+              {order.restaurant_name ?? "Custom Order"}
+            </h1>
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium",
+                style.bg,
+                style.text,
+              )}
+            >
+              <span className={cn("h-1.5 w-1.5 rounded-full", style.dot)} />
+              {order.status}
+            </span>
+          </div>
           <p className="text-muted-foreground">
-            By {order.initiator_name} ·{" "}
+            By {order.initiator_name} &middot;{" "}
             {new Date(order.created_at).toLocaleDateString()}
           </p>
         </div>
-        <span
-          className={cn(
-            "text-sm px-3 py-1 rounded font-medium",
-            STATUS_COLORS[order.status],
-          )}
-        >
-          {order.status}
-        </span>
       </div>
 
       {/* Summary cards */}
-      <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Participants</p>
+      <div className="grid gap-4 sm:grid-cols-3 mb-8">
+        <Card className="p-5 hover:shadow-md group">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 group-hover:scale-105 transition-transform">
+              <Users className="h-5 w-5" />
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">Participants</p>
+          </div>
           <p className="text-2xl font-bold">{order.participant_count}</p>
         </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Items Total</p>
+
+        <Card className="p-5 hover:shadow-md group">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-600 group-hover:scale-105 transition-transform">
+              <DollarSign className="h-5 w-5" />
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">Items Total</p>
+          </div>
           <p className="text-2xl font-bold">
             ${Number(order.total_amount).toFixed(2)}
           </p>
         </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Delivery Fee</p>
+
+        <Card className="p-5 hover:shadow-md group">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600 group-hover:scale-105 transition-transform">
+              <Truck className="h-5 w-5" />
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">Delivery Fee</p>
+          </div>
           <p className="text-2xl font-bold">
             {order.delivery_fee_total
               ? `$${Number(order.delivery_fee_total).toFixed(2)}`
-              : "—"}
+              : "\u2014"}
           </p>
         </Card>
       </div>
 
       {/* Actions */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-8">
         {canEdit && (
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="shadow-md shadow-primary/20">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Dish
               </Button>
@@ -199,7 +238,7 @@ export function OrderDetailPage() {
                 <DialogTitle>Add Your Dish</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-4">
-                <div>
+                <div className="space-y-2">
                   <Label>Dish Name</Label>
                   <Input
                     value={itemName}
@@ -207,7 +246,7 @@ export function OrderDetailPage() {
                     placeholder="Burger"
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label>Detail (optional)</Label>
                   <Input
                     value={itemDetail}
@@ -215,7 +254,7 @@ export function OrderDetailPage() {
                     placeholder="No onions"
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label>Price</Label>
                   <Input
                     type="number"
@@ -251,7 +290,7 @@ export function OrderDetailPage() {
                 <DialogTitle>Set Delivery/Packing Fee</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-4">
-                <div>
+                <div className="space-y-2">
                   <Label>Total Fee (divided equally)</Label>
                   <Input
                     type="number"
@@ -295,19 +334,35 @@ export function OrderDetailPage() {
       {/* Items grouped by user */}
       <h2 className="text-xl font-semibold mb-4">Order Items</h2>
       {Object.entries(itemsByUser).length === 0 ? (
-        <p className="text-center text-muted-foreground py-8">
-          No items yet. Be the first to add your dish!
-        </p>
+        <Card className="flex flex-col items-center justify-center py-16 border-dashed">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted mb-4">
+            <ShoppingCart className="h-7 w-7 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground font-medium mb-1">
+            No items yet
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Be the first to add your dish!
+          </p>
+        </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {Object.entries(itemsByUser).map(([userName, items]) => (
             <div key={userName}>
-              <h3 className="font-medium text-sm text-muted-foreground mb-2">
-                {userName}
-              </h3>
-              <div className="space-y-2">
+              <div className="flex items-center gap-2 mb-3">
+                <div
+                  className={cn(
+                    "flex h-7 w-7 items-center justify-center rounded-full bg-linear-to-br text-white text-[11px] font-bold shrink-0",
+                    getAvatarGradient(userName),
+                  )}
+                >
+                  {userName.charAt(0).toUpperCase()}
+                </div>
+                <h3 className="font-medium text-sm">{userName}</h3>
+              </div>
+              <div className="space-y-2 ml-9">
                 {items.map((item) => (
-                  <Card key={item.id} className="p-3">
+                  <Card key={item.id} className="p-3.5 hover:shadow-md">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">{item.name}</p>
@@ -318,7 +373,7 @@ export function OrderDetailPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="font-semibold">
+                        <span className="font-semibold text-primary">
                           ${Number(item.price).toFixed(2)}
                         </span>
                         {canEdit &&
@@ -327,8 +382,9 @@ export function OrderDetailPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleDeleteItem(item.id)}
+                              className="text-muted-foreground hover:text-destructive"
                             >
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           )}
                       </div>
