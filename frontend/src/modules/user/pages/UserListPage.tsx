@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -7,8 +8,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { APP } from "@/constants";
+import { useAppDispatch, useAppSelector, useDebounce } from "@/hooks";
+import { useGetUsersQuery } from "@/store/api/userApi";
+import {
+  selectCurrentPage,
+  selectSearchQuery,
+  setCurrentPage,
+  setSearchQuery,
+} from "@/store/slices/userSlice";
+import { formatDate } from "@/utils";
 import {
   AlertCircle,
   ChevronLeft,
@@ -16,16 +25,7 @@ import {
   Search,
   User,
 } from "lucide-react";
-import { useGetUsersQuery } from "@/store/api/userApi";
-import { useAppDispatch, useAppSelector, useDebounce } from "@/hooks";
-import {
-  selectSearchQuery,
-  selectCurrentPage,
-  setSearchQuery,
-  setCurrentPage,
-} from "@/store/slices/userSlice";
-import { APP } from "@/constants";
-import { formatDate } from "@/utils";
+import { Link } from "react-router-dom";
 
 export function UserListPage() {
   const dispatch = useAppDispatch();
@@ -35,11 +35,11 @@ export function UserListPage() {
 
   const { data, isLoading, error } = useGetUsersQuery({
     page: currentPage,
-    limit: APP.DEFAULT_PAGE_SIZE,
+    page_size: APP.DEFAULT_PAGE_SIZE,
     search: debouncedSearch || undefined,
   });
 
-  const totalPages = data ? Math.ceil(data.total / APP.DEFAULT_PAGE_SIZE) : 0;
+  const totalPages = data?.total_pages ?? 0;
 
   return (
     <div className="space-y-6">
@@ -78,7 +78,7 @@ export function UserListPage() {
       {data && (
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {data.users.map((user) => (
+            {data.items.map((user) => (
               <Link key={user.id} to={`/users/${user.id}`}>
                 <Card className="transition-shadow hover:shadow-md">
                   <CardHeader className="flex flex-row items-center gap-3 pb-2">
@@ -104,7 +104,7 @@ export function UserListPage() {
             ))}
           </div>
 
-          {data.users.length === 0 && (
+          {data.items.length === 0 && (
             <div className="py-12 text-center text-muted-foreground">
               No users found.
             </div>

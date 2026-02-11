@@ -3,6 +3,7 @@ import uuid
 from pathlib import Path
 
 import aiofiles
+from fastapi import UploadFile
 
 from app.config import settings
 
@@ -14,8 +15,10 @@ ALLOWED_MIME_TYPES = {
 }
 
 
-def _get_upload_dir() -> Path:
+def _get_upload_dir(subdirectory: str | None = None) -> Path:
     upload_dir = Path(settings.upload_dir)
+    if subdirectory:
+        upload_dir = upload_dir / subdirectory
     upload_dir.mkdir(parents=True, exist_ok=True)
     return upload_dir
 
@@ -42,6 +45,21 @@ async def save_file(content: bytes, filename: str) -> str:
     async with aiofiles.open(file_path, "wb") as f:
         await f.write(content)
 
+    return unique_name
+
+
+async def save_upload(upload_file: UploadFile, subdirectory: str | None = None) -> str:
+    """Save a FastAPI UploadFile and return the stored file path."""
+    upload_dir = _get_upload_dir(subdirectory)
+    unique_name = generate_unique_filename(upload_file.filename or "upload")
+    file_path = upload_dir / unique_name
+
+    content = await upload_file.read()
+    async with aiofiles.open(file_path, "wb") as f:
+        await f.write(content)
+
+    if subdirectory:
+        return f"{subdirectory}/{unique_name}"
     return unique_name
 
 
