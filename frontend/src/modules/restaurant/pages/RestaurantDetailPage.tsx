@@ -178,7 +178,7 @@ export function RestaurantDetailPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="font-semibold text-primary">
-                    ${Number(dish.price).toFixed(2)}
+                    {Number(dish.price).toFixed(2)} ₴
                   </span>
                   <Button
                     variant="ghost"

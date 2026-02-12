@@ -3,7 +3,7 @@ import uuid
 from pydantic import BaseModel
 
 from app.core.exceptions import ForbiddenError, NotFoundError
-from app.models.enums import BalanceChangeType, BalancesScope
+from app.models.enums import BalanceChangeType, BalancesScope, PermissionType
 from app.models.user import User
 from app.repositories.balance import BalanceHistoryRepository, BalanceRepository
 from app.repositories.group import GroupMemberRepository
@@ -42,7 +42,7 @@ class AdjustBalanceWorkflow:
             membership = await self.group_member_repository.get_membership(user.id, input_data.group_id)
             if membership is None:
                 raise ForbiddenError(detail="You are not a member of this group")
-            if membership.balances_scope != BalancesScope.EDITOR:
+            if membership.get_permission(PermissionType.BALANCES) != BalancesScope.EDITOR:
                 raise ForbiddenError(detail="You do not have permission to adjust balances")
 
         # Check target user is a member

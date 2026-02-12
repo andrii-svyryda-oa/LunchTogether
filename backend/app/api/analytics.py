@@ -9,7 +9,7 @@ from app.core.exceptions import ForbiddenError
 from app.database import get_db
 from app.dependencies import get_current_user, get_group_member_repository
 from app.models.balance import Balance
-from app.models.enums import AnalyticsScope, OrderStatus
+from app.models.enums import AnalyticsScope, OrderStatus, PermissionType
 from app.models.group import GroupMember
 from app.models.order import Order, OrderItem
 from app.models.user import User
@@ -31,7 +31,8 @@ async def get_group_analytics(
         membership = await group_member_repository.get_membership(current_user.id, group_id)
         if membership is None:
             raise ForbiddenError(detail="You are not a member of this group")
-        if membership.analytics_scope == AnalyticsScope.NONE:
+        analytics_level = membership.get_permission(PermissionType.ANALYTICS)
+        if analytics_level == AnalyticsScope.NONE or analytics_level is None:
             raise ForbiddenError(detail="You do not have permission to view analytics")
 
     # Total orders

@@ -42,14 +42,14 @@ export interface AdminUserCreateRequest {
   email: string;
   password: string;
   full_name: string;
-  is_admin?: boolean;
+  role?: string;
 }
 
 export interface AdminUserUpdateRequest {
   full_name?: string;
   email?: string;
   is_active?: boolean;
-  is_admin?: boolean;
+  role?: string;
   navigate_to_active_order?: boolean;
 }
 
@@ -64,23 +64,20 @@ export interface GroupUpdateRequest {
   description?: string;
 }
 
+export interface PermissionInput {
+  permission_type: string;
+  level: string;
+}
+
 export interface GroupMemberCreateRequest {
   user_id: string;
   role?: string;
-  members_scope?: string;
-  orders_scope?: string;
-  balances_scope?: string;
-  analytics_scope?: string;
-  restaurants_scope?: string;
+  permissions?: PermissionInput[];
 }
 
 export interface GroupMemberUpdateRequest {
   role?: string;
-  members_scope?: string;
-  orders_scope?: string;
-  balances_scope?: string;
-  analytics_scope?: string;
-  restaurants_scope?: string;
+  permissions?: PermissionInput[];
 }
 
 export interface InvitationCreateRequest {

@@ -1,10 +1,12 @@
+export type UserRole = "admin" | "user";
+
 export interface User {
   id: string;
   email: string;
   full_name: string;
   is_active: boolean;
   is_verified: boolean;
-  is_admin: boolean;
+  role: UserRole;
   navigate_to_active_order: boolean;
   created_at: string;
   updated_at: string;
@@ -27,15 +29,16 @@ export interface GroupDetail extends Group {
   members: GroupMember[];
 }
 
+export interface GroupMemberPermission {
+  permission_type: string;
+  level: string;
+}
+
 export interface GroupMember {
   id: string;
   user_id: string;
   group_id: string;
-  members_scope: string;
-  orders_scope: string;
-  balances_scope: string;
-  analytics_scope: string;
-  restaurants_scope: string;
+  permissions: GroupMemberPermission[];
   user_full_name?: string;
   user_email?: string;
   created_at: string;

@@ -4,7 +4,7 @@ from decimal import Decimal
 from pydantic import BaseModel
 
 from app.core.exceptions import ForbiddenError, NotFoundError, ValidationError
-from app.models.enums import BalanceChangeType, OrdersScope, OrderStatus
+from app.models.enums import BalanceChangeType, OrdersScope, OrderStatus, PermissionType
 from app.models.user import User
 from app.repositories.balance import BalanceHistoryRepository, BalanceRepository
 from app.repositories.group import GroupMemberRepository
@@ -70,7 +70,7 @@ class OrderLifecycleWorkflow:
         # Check user is the initiator or has editor permission
         membership = await self.group_member_repository.get_membership(user.id, order.group_id)
         is_initiator = order.initiator_id == user.id
-        is_editor = membership and membership.orders_scope == OrdersScope.EDITOR
+        is_editor = membership and membership.get_permission(PermissionType.ORDERS) == OrdersScope.EDITOR
 
         if not is_initiator and not is_editor and not user.is_admin:
             raise ForbiddenError(detail="Only the order initiator or an editor can change order status")
@@ -104,7 +104,7 @@ class OrderLifecycleWorkflow:
         # Only initiator or editor
         membership = await self.group_member_repository.get_membership(user.id, order.group_id)
         is_initiator = order.initiator_id == user.id
-        is_editor = membership and membership.orders_scope == OrdersScope.EDITOR
+        is_editor = membership and membership.get_permission(PermissionType.ORDERS) == OrdersScope.EDITOR
 
         if not is_initiator and not is_editor and not user.is_admin:
             raise ForbiddenError(detail="Only the order initiator or an editor can set delivery fees")

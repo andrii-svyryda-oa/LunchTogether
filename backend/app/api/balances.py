@@ -10,7 +10,7 @@ from app.dependencies import (
     get_current_user,
     get_group_member_repository,
 )
-from app.models.enums import BalancesScope
+from app.models.enums import BalancesScope, PermissionType
 from app.models.user import User
 from app.repositories.balance import BalanceHistoryRepository, BalanceRepository
 from app.repositories.group import GroupMemberRepository
@@ -31,9 +31,10 @@ async def _check_balance_permission(
     membership = await group_member_repository.get_membership(user.id, group_id)
     if membership is None:
         raise ForbiddenError(detail="You are not a member of this group")
-    if membership.balances_scope == BalancesScope.NONE:
+    balances_level = membership.get_permission(PermissionType.BALANCES)
+    if balances_level == BalancesScope.NONE or balances_level is None:
         raise ForbiddenError(detail="You do not have permission to view balances")
-    if require_editor and membership.balances_scope != BalancesScope.EDITOR:
+    if require_editor and balances_level != BalancesScope.EDITOR:
         raise ForbiddenError(detail="You do not have permission to adjust balances")
 
 

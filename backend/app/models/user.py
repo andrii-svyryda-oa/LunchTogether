@@ -2,6 +2,7 @@ from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
+from app.models.enums import UserRole
 
 
 class User(BaseModel):
@@ -31,9 +32,9 @@ class User(BaseModel):
         default=False,
         nullable=False,
     )
-    is_admin: Mapped[bool] = mapped_column(
-        Boolean,
-        default=False,
+    role: Mapped[str] = mapped_column(
+        String(20),
+        default=UserRole.USER,
         nullable=False,
     )
     navigate_to_active_order: Mapped[bool] = mapped_column(
@@ -41,6 +42,10 @@ class User(BaseModel):
         default=False,
         nullable=False,
     )
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role == UserRole.ADMIN
 
     # Relationships
     owned_groups: Mapped[list["Group"]] = relationship(  # noqa: F821

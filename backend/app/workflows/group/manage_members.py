@@ -3,12 +3,12 @@ import uuid
 from pydantic import BaseModel
 
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError, ValidationError
-from app.models.enums import GROUP_ROLE_PRESETS, MembersScope
+from app.models.enums import GROUP_ROLE_PRESETS, MembersScope, PermissionType
 from app.models.group import Group
 from app.models.user import User
-from app.repositories.group import GroupMemberRepository, GroupRepository
+from app.repositories.group import GroupMemberPermissionRepository, GroupMemberRepository, GroupRepository
 from app.repositories.user import UserRepository
-from app.schemas.group import GroupMemberCreate, GroupMemberResponse, GroupMemberUpdate
+from app.schemas.group import GroupMemberCreate, GroupMemberResponse, GroupMemberUpdate, PermissionResponse
 
 
 class AddMemberInput(BaseModel):
@@ -47,16 +47,32 @@ class RemoveMemberInput(BaseModel):
         arbitrary_types_allowed = True
 
 
+def _build_member_response(member, target_user=None) -> GroupMemberResponse:
+    """Build a GroupMemberResponse from a GroupMember ORM object."""
+    return GroupMemberResponse(
+        id=member.id,
+        user_id=member.user_id,
+        group_id=member.group_id,
+        permissions=[PermissionResponse(permission_type=p.permission_type, level=p.level) for p in member.permissions],
+        created_at=member.created_at,
+        updated_at=member.updated_at,
+        user_full_name=target_user.full_name if target_user else (member.user.full_name if member.user else None),
+        user_email=target_user.email if target_user else (member.user.email if member.user else None),
+    )
+
+
 class ManageMembersWorkflow:
     def __init__(
         self,
         group_repository: GroupRepository,
         group_member_repository: GroupMemberRepository,
         user_repository: UserRepository,
+        permission_repository: GroupMemberPermissionRepository,
     ):
         self.group_repository = group_repository
         self.group_member_repository = group_member_repository
         self.user_repository = user_repository
+        self.permission_repository = permission_repository
 
     async def _check_editor_permission(self, user: User, group: Group, group_id: uuid.UUID) -> None:
         """Check that the current user has Members Editor permission."""
@@ -66,7 +82,7 @@ class ManageMembersWorkflow:
         membership = await self.group_member_repository.get_membership(user.id, group_id)
         if membership is None:
             raise ForbiddenError(detail="You are not a member of this group")
-        if membership.members_scope != MembersScope.EDITOR:
+        if membership.get_permission(PermissionType.MEMBERS) != MembersScope.EDITOR:
             raise ForbiddenError(detail="You do not have permission to manage members")
 
     async def _check_not_owner(self, group: Group, target_user_id: uuid.UUID) -> None:
@@ -98,29 +114,29 @@ class ManageMembersWorkflow:
         if existing is not None:
             raise ConflictError(detail="User is already a member of this group")
 
-        # Build permission data from role preset + optional overrides
-        role_presets = GROUP_ROLE_PRESETS[input_data.data.role]
-        member_data = {
-            "user_id": input_data.data.user_id,
-            "group_id": input_data.group_id,
-            **role_presets,
-        }
-
-        # Apply optional scope overrides
-        for scope_field in ["members_scope", "orders_scope", "balances_scope", "analytics_scope", "restaurants_scope"]:
-            override = getattr(input_data.data, scope_field, None)
-            if override is not None:
-                member_data[scope_field] = override
-
-        member = await self.group_member_repository.create(member_data)
-
-        return AddMemberOutput(
-            member=GroupMemberResponse(
-                **{k: getattr(member, k) for k in GroupMemberResponse.model_fields if hasattr(member, k)},
-                user_full_name=target_user.full_name,
-                user_email=target_user.email,
-            )
+        # Create the group member
+        member = await self.group_member_repository.create(
+            {
+                "user_id": input_data.data.user_id,
+                "group_id": input_data.group_id,
+            }
         )
+
+        # Build permissions from role preset
+        role_presets = GROUP_ROLE_PRESETS[input_data.data.role]
+        permissions_data = {pt.value: level for pt, level in role_presets.items()}
+
+        # Apply optional permission overrides
+        if input_data.data.permissions:
+            for perm in input_data.data.permissions:
+                permissions_data[perm.permission_type.value] = perm.level
+
+        await self.permission_repository.set_permissions(member.id, permissions_data)
+
+        # Reload member with permissions
+        member = await self.group_member_repository.get_membership(input_data.data.user_id, input_data.group_id)
+
+        return AddMemberOutput(member=_build_member_response(member, target_user))
 
     async def update_member(self, input_data: UpdateMemberInput) -> UpdateMemberOutput:
         user: User = input_data.current_user  # type: ignore[assignment]
@@ -136,34 +152,26 @@ class ManageMembersWorkflow:
         if membership is None:
             raise NotFoundError(detail="Member not found in this group")
 
-        # Build update data
-        update_data = {}
+        # Build permissions from role preset (if provided) + overrides
+        permissions_data: dict[str, str] = {}
 
-        # If role preset is provided, apply all presets first
         if input_data.data.role is not None:
             role_presets = GROUP_ROLE_PRESETS[input_data.data.role]
-            update_data.update(role_presets)
+            permissions_data = {pt.value: level for pt, level in role_presets.items()}
 
-        # Apply individual scope overrides
-        for scope_field in ["members_scope", "orders_scope", "balances_scope", "analytics_scope", "restaurants_scope"]:
-            override = getattr(input_data.data, scope_field, None)
-            if override is not None:
-                update_data[scope_field] = override
+        # Apply individual permission overrides
+        if input_data.data.permissions:
+            for perm in input_data.data.permissions:
+                permissions_data[perm.permission_type.value] = perm.level
 
-        if update_data:
-            member = await self.group_member_repository.update(membership.id, update_data)
-        else:
-            member = membership
+        if permissions_data:
+            await self.permission_repository.set_permissions(membership.id, permissions_data)
 
+        # Reload member with updated permissions
+        member = await self.group_member_repository.get_membership(input_data.member_user_id, input_data.group_id)
         target_user = await self.user_repository.get_by_id(input_data.member_user_id)
 
-        return UpdateMemberOutput(
-            member=GroupMemberResponse(
-                **{k: getattr(member, k) for k in GroupMemberResponse.model_fields if hasattr(member, k)},
-                user_full_name=target_user.full_name if target_user else None,
-                user_email=target_user.email if target_user else None,
-            )
-        )
+        return UpdateMemberOutput(member=_build_member_response(member, target_user))
 
     async def remove_member(self, input_data: RemoveMemberInput) -> bool:
         user: User = input_data.current_user  # type: ignore[assignment]

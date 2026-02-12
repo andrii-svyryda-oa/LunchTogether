@@ -19,17 +19,37 @@ import {
   useUpdateOrderStatusMutation,
 } from "@/store/api/orderApi";
 import { cn } from "@/utils";
-import { DollarSign, Plus, ShoppingCart, Trash2, Truck, Users } from "lucide-react";
+import {
+  DollarSign,
+  Plus,
+  ShoppingCart,
+  Trash2,
+  Truck,
+  Users,
+} from "lucide-react";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 
-const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
-  initiated: { bg: "bg-blue-50", text: "text-blue-700", dot: "bg-blue-500" },
-  confirmed: { bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-500" },
-  ordered: { bg: "bg-purple-50", text: "text-purple-700", dot: "bg-purple-500" },
-  finished: { bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500" },
-  cancelled: { bg: "bg-red-50", text: "text-red-700", dot: "bg-red-500" },
-};
+const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string }> =
+  {
+    initiated: { bg: "bg-blue-50", text: "text-blue-700", dot: "bg-blue-500" },
+    confirmed: {
+      bg: "bg-amber-50",
+      text: "text-amber-700",
+      dot: "bg-amber-500",
+    },
+    ordered: {
+      bg: "bg-purple-50",
+      text: "text-purple-700",
+      dot: "bg-purple-500",
+    },
+    finished: {
+      bg: "bg-emerald-50",
+      text: "text-emerald-700",
+      dot: "bg-emerald-500",
+    },
+    cancelled: { bg: "bg-red-50", text: "text-red-700", dot: "bg-red-500" },
+  };
 
 const NEXT_STATUS: Record<string, { label: string; status: string }> = {
   initiated: { label: "Confirm Order", status: "confirmed" },
@@ -142,20 +162,17 @@ export function OrderDetailPage() {
 
   const isInitiator = order.initiator_id === user?.id;
   const canEdit = order.status === "initiated";
-  const canManage = isInitiator || user?.is_admin;
+  const canManage = isInitiator || user?.role === "admin";
   const nextAction = NEXT_STATUS[order.status];
   const style = STATUS_STYLES[order.status] ?? STATUS_STYLES.initiated;
 
   // Group items by user
-  const itemsByUser = order.items.reduce(
-    (acc, item) => {
-      const key = item.user_full_name ?? item.user_id;
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(item);
-      return acc;
-    },
-    {} as Record<string, typeof order.items>,
-  );
+  const itemsByUser = order.items.reduce((acc, item) => {
+    const key = item.user_full_name ?? item.user_id;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(item);
+    return acc;
+  }, {} as Record<string, typeof order.items>);
 
   return (
     <div className="animate-slide-up">
@@ -191,7 +208,9 @@ export function OrderDetailPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 group-hover:scale-105 transition-transform">
               <Users className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-muted-foreground">Participants</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Participants
+            </p>
           </div>
           <p className="text-2xl font-bold">{order.participant_count}</p>
         </Card>
@@ -201,10 +220,12 @@ export function OrderDetailPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-600 group-hover:scale-105 transition-transform">
               <DollarSign className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-muted-foreground">Items Total</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Items Total
+            </p>
           </div>
           <p className="text-2xl font-bold">
-            ${Number(order.total_amount).toFixed(2)}
+            {Number(order.total_amount).toFixed(2)} ₴
           </p>
         </Card>
 
@@ -213,11 +234,13 @@ export function OrderDetailPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600 group-hover:scale-105 transition-transform">
               <Truck className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-muted-foreground">Delivery Fee</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              Delivery Fee
+            </p>
           </div>
           <p className="text-2xl font-bold">
             {order.delivery_fee_total
-              ? `$${Number(order.delivery_fee_total).toFixed(2)}`
+              ? `${Number(order.delivery_fee_total).toFixed(2)} ₴`
               : "\u2014"}
           </p>
         </Card>
@@ -338,9 +361,7 @@ export function OrderDetailPage() {
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted mb-4">
             <ShoppingCart className="h-7 w-7 text-muted-foreground" />
           </div>
-          <p className="text-muted-foreground font-medium mb-1">
-            No items yet
-          </p>
+          <p className="text-muted-foreground font-medium mb-1">No items yet</p>
           <p className="text-sm text-muted-foreground">
             Be the first to add your dish!
           </p>
@@ -374,10 +395,11 @@ export function OrderDetailPage() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-semibold text-primary">
-                          ${Number(item.price).toFixed(2)}
+                          {Number(item.price).toFixed(2)} ₴
                         </span>
                         {canEdit &&
-                          (item.user_id === user?.id || user?.is_admin) && (
+                          (item.user_id === user?.id ||
+                            user?.role === "admin") && (
                             <Button
                               variant="ghost"
                               size="icon"

@@ -127,12 +127,12 @@ export function SettingsPage() {
                 <span
                   className={cn(
                     "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium",
-                    user?.is_admin
+                    user?.role === "admin"
                       ? "bg-purple-50 text-purple-700"
                       : "bg-blue-50 text-blue-700",
                   )}
                 >
-                  {user?.is_admin ? "Admin" : "User"}
+                  {user?.role === "admin" ? "Admin" : "User"}
                 </span>
               </div>
               <div>

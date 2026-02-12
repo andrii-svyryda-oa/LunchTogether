@@ -3,14 +3,7 @@ from datetime import datetime
 
 from pydantic import Field
 
-from app.models.enums import (
-    AnalyticsScope,
-    BalancesScope,
-    GroupRole,
-    MembersScope,
-    OrdersScope,
-    RestaurantsScope,
-)
+from app.models.enums import GroupRole, PermissionType
 from app.schemas.base import BaseSchema
 
 # --- Group ---
@@ -41,38 +34,40 @@ class GroupDetailResponse(GroupResponse):
     members: list["GroupMemberResponse"] = []
 
 
+# --- Permission ---
+
+
+class PermissionResponse(BaseSchema):
+    permission_type: str
+    level: str
+
+
+class PermissionInput(BaseSchema):
+    permission_type: PermissionType
+    level: str
+
+
 # --- Group Member ---
 
 
 class GroupMemberCreate(BaseSchema):
     user_id: uuid.UUID
     role: GroupRole = GroupRole.MEMBER
-    # Optional scope overrides after role preset
-    members_scope: MembersScope | None = None
-    orders_scope: OrdersScope | None = None
-    balances_scope: BalancesScope | None = None
-    analytics_scope: AnalyticsScope | None = None
-    restaurants_scope: RestaurantsScope | None = None
+    # Optional permission overrides after role preset
+    permissions: list[PermissionInput] | None = None
 
 
 class GroupMemberUpdate(BaseSchema):
     role: GroupRole | None = None
-    members_scope: MembersScope | None = None
-    orders_scope: OrdersScope | None = None
-    balances_scope: BalancesScope | None = None
-    analytics_scope: AnalyticsScope | None = None
-    restaurants_scope: RestaurantsScope | None = None
+    # Optional permission overrides after role preset
+    permissions: list[PermissionInput] | None = None
 
 
 class GroupMemberResponse(BaseSchema):
     id: uuid.UUID
     user_id: uuid.UUID
     group_id: uuid.UUID
-    members_scope: str
-    orders_scope: str
-    balances_scope: str
-    analytics_scope: str
-    restaurants_scope: str
+    permissions: list[PermissionResponse] = []
     created_at: datetime
     updated_at: datetime
     user_full_name: str | None = None

@@ -6,7 +6,12 @@ from pydantic import BaseModel
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.models.enums import GROUP_ROLE_PRESETS, GroupRole, InvitationStatus
 from app.models.user import User
-from app.repositories.group import GroupInvitationRepository, GroupMemberRepository, GroupRepository
+from app.repositories.group import (
+    GroupInvitationRepository,
+    GroupMemberPermissionRepository,
+    GroupMemberRepository,
+    GroupRepository,
+)
 from app.repositories.user import UserRepository
 from app.schemas.group import InvitationAcceptResponse, InvitationCreate, InvitationResponse
 
@@ -43,11 +48,13 @@ class InviteWorkflow:
         group_member_repository: GroupMemberRepository,
         invitation_repository: GroupInvitationRepository,
         user_repository: UserRepository,
+        permission_repository: GroupMemberPermissionRepository,
     ):
         self.group_repository = group_repository
         self.group_member_repository = group_member_repository
         self.invitation_repository = invitation_repository
         self.user_repository = user_repository
+        self.permission_repository = permission_repository
 
     async def create_invitation(self, input_data: InviteInput) -> InviteOutput:
         user: User = input_data.current_user  # type: ignore[assignment]
@@ -111,12 +118,18 @@ class InviteWorkflow:
             raise ForbiddenError(detail="Group has reached the maximum of 25 members")
 
         # Add user to group with default Member role
-        await self.group_member_repository.create(
+        member = await self.group_member_repository.create(
             {
                 "user_id": user.id,
                 "group_id": invitation.group_id,
-                **GROUP_ROLE_PRESETS[GroupRole.MEMBER],
             }
+        )
+
+        # Set Member role permissions
+        member_presets = GROUP_ROLE_PRESETS[GroupRole.MEMBER]
+        await self.permission_repository.set_permissions(
+            member.id,
+            {pt.value: level for pt, level in member_presets.items()},
         )
 
         # Update invitation status

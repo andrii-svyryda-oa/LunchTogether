@@ -12,7 +12,7 @@ from app.dependencies import (
     get_order_lifecycle_workflow,
     get_order_repository,
 )
-from app.models.enums import OrdersScope, OrderStatus
+from app.models.enums import OrdersScope, OrderStatus, PermissionType
 from app.models.user import User
 from app.repositories.group import GroupMemberRepository
 from app.repositories.order import FavoriteDishRepository, OrderItemRepository, OrderRepository
@@ -217,7 +217,7 @@ async def update_order_item(
         membership = await group_member_repository.get_membership(current_user.id, group_id)
         if membership is None:
             raise ForbiddenError(detail="You are not a member of this group")
-        if membership.orders_scope != OrdersScope.EDITOR and item.user_id != current_user.id:
+        if membership.get_permission(PermissionType.ORDERS) != OrdersScope.EDITOR and item.user_id != current_user.id:
             raise ForbiddenError(detail="You can only edit your own items")
 
     update_data = data.model_dump(exclude_unset=True)
@@ -256,7 +256,7 @@ async def delete_order_item(
         membership = await group_member_repository.get_membership(current_user.id, group_id)
         if membership is None:
             raise ForbiddenError(detail="You are not a member of this group")
-        if membership.orders_scope != OrdersScope.EDITOR and item.user_id != current_user.id:
+        if membership.get_permission(PermissionType.ORDERS) != OrdersScope.EDITOR and item.user_id != current_user.id:
             raise ForbiddenError(detail="You can only remove your own items")
 
     await order_item_repository.delete(item_id)

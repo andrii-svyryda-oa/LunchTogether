@@ -1,9 +1,34 @@
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ROUTES } from "@/constants";
 import { useAuth } from "@/hooks";
-import { useGetGroupsQuery } from "@/store/api/groupApi";
+import {
+  useCreateGroupMutation,
+  useGetGroupsQuery,
+} from "@/store/api/groupApi";
 import { cn } from "@/utils";
-import { Home, Settings, ShieldCheck, User, Users } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import {
+  Home,
+  LayoutDashboard,
+  Plus,
+  Settings,
+  ShieldCheck,
+  ShoppingCart,
+  User,
+  Users,
+  UtensilsCrossed,
+  Wallet,
+} from "lucide-react";
+import { useState } from "react";
+import { NavLink, useLocation, useParams } from "react-router-dom";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -24,9 +49,53 @@ function getGroupGradient(name: string): string {
   return GROUP_GRADIENTS[index];
 }
 
+// Pages that belong to the "home" context
+const HOME_PATHS = ["/", "/profile", "/settings", "/users"];
+
+function isHomeContext(pathname: string): boolean {
+  return HOME_PATHS.some(
+    (p) => pathname === p || (p !== "/" && pathname.startsWith(p + "/")),
+  );
+}
+
+function isGroupContext(pathname: string): boolean {
+  return pathname.startsWith("/groups/");
+}
+
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user } = useAuth();
   const { data: groups } = useGetGroupsQuery();
+  const location = useLocation();
+  const { groupId } = useParams<{ groupId: string }>();
+  const [createGroup] = useCreateGroupMutation();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupDesc, setNewGroupDesc] = useState("");
+
+  // Determine which groupId is active from the URL
+  const activeGroupId =
+    groupId ??
+    (isGroupContext(location.pathname)
+      ? location.pathname.split("/")[2]
+      : undefined);
+
+  const inHomeContext =
+    isHomeContext(location.pathname) && !isGroupContext(location.pathname);
+  const inGroupContext = isGroupContext(location.pathname);
+
+  const handleCreateGroup = async () => {
+    try {
+      await createGroup({
+        name: newGroupName,
+        description: newGroupDesc || undefined,
+      }).unwrap();
+      setCreateOpen(false);
+      setNewGroupName("");
+      setNewGroupDesc("");
+    } catch {
+      // Error handled by RTK Query
+    }
+  };
 
   return (
     <>
@@ -51,10 +120,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <NavLink
             to={ROUTES.HOME}
             onClick={onClose}
-            className={({ isActive }) =>
+            className={() =>
               cn(
                 "h-11 w-11 rounded-2xl flex items-center justify-center transition-all duration-200 hover:rounded-xl group",
-                isActive
+                inHomeContext
                   ? "bg-primary text-primary-foreground rounded-xl shadow-lg shadow-primary/30"
                   : "bg-sidebar-accent text-sidebar-foreground hover:bg-primary/20 hover:text-primary",
               )
@@ -72,10 +141,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               to={`/groups/${group.id}`}
               onClick={onClose}
               title={group.name}
-              className={({ isActive }) =>
+              className={() =>
                 cn(
                   "h-11 w-11 rounded-2xl flex items-center justify-center text-sm font-bold transition-all duration-200 hover:rounded-xl",
-                  isActive
+                  activeGroupId === group.id
                     ? `bg-linear-to-br ${getGroupGradient(
                         group.name,
                       )} text-white rounded-xl shadow-lg`
@@ -86,86 +155,145 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               {group.name.charAt(0).toUpperCase()}
             </NavLink>
           ))}
+
+          {/* Add group button */}
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <DialogTrigger asChild>
+              <button
+                className="h-11 w-11 rounded-2xl flex items-center justify-center text-sm transition-all duration-200 hover:rounded-xl bg-sidebar-accent text-sidebar-foreground hover:bg-emerald-100 hover:text-emerald-600 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-400"
+                title="Create Group"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Group</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="sidebar-group-name">Name</Label>
+                  <Input
+                    id="sidebar-group-name"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    placeholder="Lunch crew"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sidebar-group-desc">
+                    Description (optional)
+                  </Label>
+                  <Input
+                    id="sidebar-group-desc"
+                    value={newGroupDesc}
+                    onChange={(e) => setNewGroupDesc(e.target.value)}
+                    placeholder="Our daily lunch group"
+                  />
+                </div>
+                <Button
+                  onClick={handleCreateGroup}
+                  disabled={!newGroupName.trim()}
+                  className="w-full"
+                >
+                  Create
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        {/* Navigation links */}
+        {/* Context-dependent sub-navigation */}
         <nav className="flex-1 flex flex-col p-3 overflow-y-auto">
-          <div className="space-y-0.5">
-            <p className="text-[11px] font-semibold text-sidebar-foreground/40 uppercase tracking-wider px-3 mb-2">
-              Navigation
-            </p>
-            <NavLink
-              to={ROUTES.HOME}
-              onClick={onClose}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-primary"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                )
-              }
-            >
-              <Home className="h-4 w-4" />
-              Home
-            </NavLink>
+          {inHomeContext && (
+            <>
+              <div className="space-y-0.5">
+                <p className="text-[11px] font-semibold text-sidebar-foreground/40 uppercase tracking-wider px-3 mb-2">
+                  Navigation
+                </p>
+                <NavLink
+                  to={ROUTES.HOME}
+                  end
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-primary"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    )
+                  }
+                >
+                  <Home className="h-4 w-4" />
+                  Home
+                </NavLink>
 
-            <NavLink
-              to={ROUTES.GROUPS}
-              onClick={onClose}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-primary"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                )
-              }
-            >
-              <Users className="h-4 w-4" />
-              Groups
-            </NavLink>
+                <NavLink
+                  to={ROUTES.PROFILE}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-primary"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    )
+                  }
+                >
+                  <User className="h-4 w-4" />
+                  Profile
+                </NavLink>
 
-            <NavLink
-              to={ROUTES.PROFILE}
-              onClick={onClose}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-primary"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                )
-              }
-            >
-              <User className="h-4 w-4" />
-              Profile
-            </NavLink>
+                <NavLink
+                  to={ROUTES.SETTINGS}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-primary"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    )
+                  }
+                >
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </NavLink>
+              </div>
 
-            <NavLink
-              to={ROUTES.SETTINGS}
-              onClick={onClose}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-primary"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                )
-              }
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </NavLink>
-          </div>
+              {user?.role === "admin" && (
+                <div className="mt-auto pt-4">
+                  <p className="text-[11px] font-semibold text-sidebar-foreground/40 uppercase tracking-wider px-3 mb-2">
+                    Admin
+                  </p>
+                  <NavLink
+                    to={ROUTES.USERS}
+                    onClick={onClose}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-sidebar-accent text-sidebar-primary"
+                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      )
+                    }
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    Manage Users
+                  </NavLink>
+                </div>
+              )}
+            </>
+          )}
 
-          {user?.is_admin && (
-            <div className="mt-auto pt-4">
+          {inGroupContext && activeGroupId && (
+            <div className="space-y-0.5">
               <p className="text-[11px] font-semibold text-sidebar-foreground/40 uppercase tracking-wider px-3 mb-2">
-                Admin
+                Group
               </p>
               <NavLink
-                to={ROUTES.USERS}
+                to={`/groups/${activeGroupId}`}
+                end
                 onClick={onClose}
                 className={({ isActive }) =>
                   cn(
@@ -176,8 +304,72 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   )
                 }
               >
-                <ShieldCheck className="h-4 w-4" />
-                Manage Users
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboard
+              </NavLink>
+
+              <NavLink
+                to={`/groups/${activeGroupId}/members`}
+                onClick={onClose}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-primary"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  )
+                }
+              >
+                <Users className="h-4 w-4" />
+                Members
+              </NavLink>
+
+              <NavLink
+                to={`/groups/${activeGroupId}/restaurants`}
+                onClick={onClose}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-primary"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  )
+                }
+              >
+                <UtensilsCrossed className="h-4 w-4" />
+                Restaurants
+              </NavLink>
+
+              <NavLink
+                to={`/groups/${activeGroupId}/orders`}
+                onClick={onClose}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-primary"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  )
+                }
+              >
+                <ShoppingCart className="h-4 w-4" />
+                Orders
+              </NavLink>
+
+              <NavLink
+                to={`/groups/${activeGroupId}/balances`}
+                onClick={onClose}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-primary"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  )
+                }
+              >
+                <Wallet className="h-4 w-4" />
+                Balances
               </NavLink>
             </div>
           )}

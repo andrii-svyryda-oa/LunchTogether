@@ -12,7 +12,7 @@ from app.dependencies import (
     get_invite_workflow,
     get_manage_members_workflow,
 )
-from app.models.enums import MembersScope
+from app.models.enums import MembersScope, PermissionType
 from app.models.user import User
 from app.repositories.group import GroupMemberRepository, GroupRepository
 from app.schemas.base import MessageResponse
@@ -26,6 +26,7 @@ from app.schemas.group import (
     GroupUpdate,
     InvitationCreate,
     InvitationResponse,
+    PermissionResponse,
 )
 from app.workflows.group.create import CreateGroupInput, CreateGroupWorkflow
 from app.workflows.group.invite import AcceptInviteInput, InviteInput, InviteWorkflow
@@ -85,7 +86,12 @@ async def get_group(
 
     members = [
         GroupMemberResponse(
-            **{k: getattr(m, k) for k in GroupMemberResponse.model_fields if hasattr(m, k)},
+            id=m.id,
+            user_id=m.user_id,
+            group_id=m.group_id,
+            permissions=[PermissionResponse(permission_type=p.permission_type, level=p.level) for p in m.permissions],
+            created_at=m.created_at,
+            updated_at=m.updated_at,
             user_full_name=m.user.full_name if m.user else None,
             user_email=m.user.email if m.user else None,
         )
@@ -113,7 +119,7 @@ async def update_group(
     # Only owner, members editors, or admins can update
     if not current_user.is_admin and group.owner_id != current_user.id:
         membership = await group_member_repository.get_membership(current_user.id, group_id)
-        if membership is None or membership.members_scope != MembersScope.EDITOR:
+        if membership is None or membership.get_permission(PermissionType.MEMBERS) != MembersScope.EDITOR:
             raise ForbiddenError(detail="You do not have permission to update this group")
 
     update_data = data.model_dump(exclude_unset=True)
@@ -138,7 +144,7 @@ async def upload_group_logo(
 
     if not current_user.is_admin and group.owner_id != current_user.id:
         membership = await group_member_repository.get_membership(current_user.id, group_id)
-        if membership is None or membership.members_scope != MembersScope.EDITOR:
+        if membership is None or membership.get_permission(PermissionType.MEMBERS) != MembersScope.EDITOR:
             raise ForbiddenError(detail="You do not have permission to update this group")
 
     file_path = await save_upload(file, subdirectory="group-logos")
@@ -181,7 +187,12 @@ async def list_members(
     members = await group_member_repository.get_members_for_group(group_id)
     return [
         GroupMemberResponse(
-            **{k: getattr(m, k) for k in GroupMemberResponse.model_fields if hasattr(m, k)},
+            id=m.id,
+            user_id=m.user_id,
+            group_id=m.group_id,
+            permissions=[PermissionResponse(permission_type=p.permission_type, level=p.level) for p in m.permissions],
+            created_at=m.created_at,
+            updated_at=m.updated_at,
             user_full_name=m.user.full_name if m.user else None,
             user_email=m.user.email if m.user else None,
         )

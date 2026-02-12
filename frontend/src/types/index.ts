@@ -8,6 +8,7 @@ export type {
   GroupDetail,
   GroupInvitation,
   GroupMember,
+  GroupMemberPermission,
   Order,
   OrderDetail,
   OrderItem,
@@ -17,7 +18,7 @@ export type {
   UserAnalytics,
 } from "./models";
 
-export type { OrderStatus } from "./models";
+export type { OrderStatus, UserRole } from "./models";
 
 export {
   ANALYTICS_SCOPES,

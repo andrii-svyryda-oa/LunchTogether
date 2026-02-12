@@ -3,7 +3,7 @@ import uuid
 from pydantic import BaseModel
 
 from app.core.exceptions import ForbiddenError, NotFoundError
-from app.models.enums import OrdersScope, OrderStatus
+from app.models.enums import OrdersScope, OrderStatus, PermissionType
 from app.models.user import User
 from app.repositories.group import GroupMemberRepository, GroupRepository
 from app.repositories.order import OrderRepository
@@ -50,7 +50,8 @@ class CreateOrderWorkflow:
         if membership is None and not user.is_admin:
             raise ForbiddenError(detail="You are not a member of this group")
 
-        if membership and membership.orders_scope not in (OrdersScope.EDITOR, OrdersScope.INITIATOR):
+        orders_level = membership.get_permission(PermissionType.ORDERS) if membership else None
+        if membership and orders_level not in (OrdersScope.EDITOR, OrdersScope.INITIATOR):
             raise ForbiddenError(detail="You do not have permission to create orders")
 
         # Check no active order exists

@@ -5,14 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
-from app.models.enums import (
-    AnalyticsScope,
-    BalancesScope,
-    InvitationStatus,
-    MembersScope,
-    OrdersScope,
-    RestaurantsScope,
-)
+from app.models.enums import InvitationStatus, PermissionType
 
 
 class Group(BaseModel):
@@ -84,33 +77,6 @@ class GroupMember(BaseModel):
         nullable=False,
     )
 
-    # Permission scopes
-    members_scope: Mapped[str] = mapped_column(
-        String(20),
-        default=MembersScope.NONE,
-        nullable=False,
-    )
-    orders_scope: Mapped[str] = mapped_column(
-        String(20),
-        default=OrdersScope.PARTICIPANT,
-        nullable=False,
-    )
-    balances_scope: Mapped[str] = mapped_column(
-        String(20),
-        default=BalancesScope.NONE,
-        nullable=False,
-    )
-    analytics_scope: Mapped[str] = mapped_column(
-        String(20),
-        default=AnalyticsScope.NONE,
-        nullable=False,
-    )
-    restaurants_scope: Mapped[str] = mapped_column(
-        String(20),
-        default=RestaurantsScope.VIEWER,
-        nullable=False,
-    )
-
     # Relationships
     user: Mapped["User"] = relationship(  # noqa: F821
         "User",
@@ -121,6 +87,45 @@ class GroupMember(BaseModel):
         "Group",
         back_populates="members",
         foreign_keys=[group_id],
+    )
+    permissions: Mapped[list["GroupMemberPermission"]] = relationship(
+        "GroupMemberPermission",
+        back_populates="group_member",
+        cascade="all, delete-orphan",
+        lazy="joined",
+    )
+
+    def get_permission(self, permission_type: str | PermissionType) -> str | None:
+        """Get the level for a given permission type, or None if not set."""
+        pt = permission_type.value if isinstance(permission_type, PermissionType) else permission_type
+        for perm in self.permissions:
+            if perm.permission_type == pt:
+                return perm.level
+        return None
+
+
+class GroupMemberPermission(BaseModel):
+    __tablename__ = "group_member_permissions"
+    __table_args__ = (UniqueConstraint("group_member_id", "permission_type", name="uq_group_member_permission_type"),)
+
+    group_member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("group_members.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    permission_type: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+    )
+    level: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+    )
+
+    # Relationships
+    group_member: Mapped["GroupMember"] = relationship(
+        "GroupMember",
+        back_populates="permissions",
     )
 
 

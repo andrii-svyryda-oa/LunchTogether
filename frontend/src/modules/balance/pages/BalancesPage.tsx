@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Combobox } from "@/components/ui/combobox";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +17,7 @@ import {
   useGetBalancesQuery,
 } from "@/store/api/balanceApi";
 import { cn } from "@/utils";
-import { ChevronDown, ChevronUp, History, Plus, Wallet } from "lucide-react";
+import { ChevronUp, History, Plus, Wallet } from "lucide-react";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 
@@ -103,18 +104,16 @@ export function BalancesPage() {
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
                 <Label>Member</Label>
-                <select
+                <Combobox
+                  options={(balances ?? []).map((b) => ({
+                    value: b.user_id,
+                    label: b.user_full_name ?? b.user_id,
+                  }))}
                   value={adjustUserId}
-                  onChange={(e) => setAdjustUserId(e.target.value)}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">Select member</option>
-                  {balances?.map((b) => (
-                    <option key={b.user_id} value={b.user_id}>
-                      {b.user_full_name ?? b.user_id}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setAdjustUserId}
+                  placeholder="Select member..."
+                  searchPlaceholder="Search members..."
+                />
               </div>
               <div className="space-y-2">
                 <Label>Amount (positive to add, negative to subtract)</Label>
@@ -194,7 +193,7 @@ export function BalancesPage() {
                             : "text-red-600",
                         )}
                       >
-                        ${Number(balance.amount).toFixed(2)}
+                        {Number(balance.amount).toFixed(2)} ₴
                       </span>
                       <Button
                         variant="ghost"
@@ -264,11 +263,11 @@ export function BalancesPage() {
                                     : "text-red-600",
                                 )}
                               >
-                                {Number(entry.amount) >= 0 ? "+" : ""}$
-                                {Number(entry.amount).toFixed(2)}
+                                {Number(entry.amount) >= 0 ? "+" : ""}
+                                {Number(entry.amount).toFixed(2)} ₴
                               </span>
                               <span className="text-muted-foreground text-xs">
-                                = ${Number(entry.balance_after).toFixed(2)}
+                                = {Number(entry.balance_after).toFixed(2)} ₴
                               </span>
                             </div>
                           </div>

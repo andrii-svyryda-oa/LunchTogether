@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Combobox } from "@/components/ui/combobox";
 import {
   Dialog,
   DialogContent,
@@ -7,7 +8,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   useCreateOrderMutation,
@@ -19,13 +19,26 @@ import { ArrowRight, Plus, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
-const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
-  initiated: { bg: "bg-blue-50", text: "text-blue-700", dot: "bg-blue-500" },
-  confirmed: { bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-500" },
-  ordered: { bg: "bg-purple-50", text: "text-purple-700", dot: "bg-purple-500" },
-  finished: { bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500" },
-  cancelled: { bg: "bg-red-50", text: "text-red-700", dot: "bg-red-500" },
-};
+const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string }> =
+  {
+    initiated: { bg: "bg-blue-50", text: "text-blue-700", dot: "bg-blue-500" },
+    confirmed: {
+      bg: "bg-amber-50",
+      text: "text-amber-700",
+      dot: "bg-amber-500",
+    },
+    ordered: {
+      bg: "bg-purple-50",
+      text: "text-purple-700",
+      dot: "bg-purple-500",
+    },
+    finished: {
+      bg: "bg-emerald-50",
+      text: "text-emerald-700",
+      dot: "bg-emerald-500",
+    },
+    cancelled: { bg: "bg-red-50", text: "text-red-700", dot: "bg-red-500" },
+  };
 
 export function OrderListPage() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -55,6 +68,11 @@ export function OrderListPage() {
       // handled
     }
   };
+
+  const restaurantOptions = (restaurants ?? []).map((r) => ({
+    value: r.id,
+    label: r.name,
+  }));
 
   if (isLoading) {
     return (
@@ -86,30 +104,33 @@ export function OrderListPage() {
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>Restaurant (optional)</Label>
-                <select
+                <Label>Restaurant</Label>
+                <Combobox
+                  options={restaurantOptions}
                   value={selectedRestaurant}
-                  onChange={(e) => setSelectedRestaurant(e.target.value)}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">Select or enter custom name</option>
-                  {restaurants?.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => {
+                    setSelectedRestaurant(val);
+                    if (val) setCustomName("");
+                  }}
+                  placeholder="Select or type to create..."
+                  searchPlaceholder="Search restaurants..."
+                  emptyText="No restaurants found."
+                  allowCreate
+                  createLabel="Create"
+                  onCreateNew={(name) => {
+                    setSelectedRestaurant("");
+                    setCustomName(name);
+                  }}
+                />
+                {customName && !selectedRestaurant && (
+                  <p className="text-sm text-muted-foreground">
+                    New restaurant:{" "}
+                    <span className="font-medium text-foreground">
+                      {customName}
+                    </span>
+                  </p>
+                )}
               </div>
-              {!selectedRestaurant && (
-                <div className="space-y-2">
-                  <Label>Custom Restaurant Name</Label>
-                  <Input
-                    value={customName}
-                    onChange={(e) => setCustomName(e.target.value)}
-                    placeholder="New place on Main St."
-                  />
-                </div>
-              )}
               <Button onClick={handleCreate} className="w-full">
                 Start Order
               </Button>
@@ -136,10 +157,7 @@ export function OrderListPage() {
             const style =
               STATUS_STYLES[order.status] ?? STATUS_STYLES.initiated;
             return (
-              <Link
-                key={order.id}
-                to={`/groups/${groupId}/orders/${order.id}`}
-              >
+              <Link key={order.id} to={`/groups/${groupId}/orders/${order.id}`}>
                 <Card className="p-4 hover:shadow-md hover:border-primary/30 cursor-pointer group mb-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -164,10 +182,7 @@ export function OrderListPage() {
                         )}
                       >
                         <span
-                          className={cn(
-                            "h-1.5 w-1.5 rounded-full",
-                            style.dot,
-                          )}
+                          className={cn("h-1.5 w-1.5 rounded-full", style.dot)}
                         />
                         {order.status}
                       </span>

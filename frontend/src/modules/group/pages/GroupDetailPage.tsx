@@ -123,8 +123,8 @@ export function GroupDetailPage() {
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {activeOrder.restaurant_name ?? "Custom"} &middot;{" "}
-                    {activeOrder.participant_count} participants &middot; $
-                    {Number(activeOrder.total_amount).toFixed(2)} total
+                    {activeOrder.participant_count} participants &middot;{" "}
+                    {Number(activeOrder.total_amount).toFixed(2)} ₴ total
                   </p>
                 </div>
               </div>
@@ -143,7 +143,9 @@ export function GroupDetailPage() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 group-hover:scale-105 transition-transform">
                   <ShoppingCart className="h-5 w-5" />
                 </div>
-                <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total Orders
+                </p>
               </div>
               <p className="text-2xl font-bold">{analytics.total_orders}</p>
             </Card>
@@ -153,10 +155,12 @@ export function GroupDetailPage() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-600 group-hover:scale-105 transition-transform">
                   <DollarSign className="h-5 w-5" />
                 </div>
-                <p className="text-sm font-medium text-muted-foreground">Total Spent</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total Spent
+                </p>
               </div>
               <p className="text-2xl font-bold">
-                ${Number(analytics.total_spent).toFixed(2)}
+                {Number(analytics.total_spent).toFixed(2)} ₴
               </p>
             </Card>
 
@@ -165,7 +169,9 @@ export function GroupDetailPage() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600 group-hover:scale-105 transition-transform">
                   <Users className="h-5 w-5" />
                 </div>
-                <p className="text-sm font-medium text-muted-foreground">Members</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Members
+                </p>
               </div>
               <p className="text-2xl font-bold">{analytics.total_members}</p>
             </Card>
@@ -175,10 +181,12 @@ export function GroupDetailPage() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 group-hover:scale-105 transition-transform">
                   <TrendingUp className="h-5 w-5" />
                 </div>
-                <p className="text-sm font-medium text-muted-foreground">Avg. Order</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Avg. Order
+                </p>
               </div>
               <p className="text-2xl font-bold">
-                ${Number(analytics.average_order_value).toFixed(2)}
+                {Number(analytics.average_order_value).toFixed(2)} ₴
               </p>
             </Card>
           </>
@@ -201,7 +209,9 @@ export function GroupDetailPage() {
                 <Wallet className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">My Balance</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  My Balance
+                </p>
                 <p
                   className={cn(
                     "text-2xl font-bold",
@@ -210,7 +220,7 @@ export function GroupDetailPage() {
                       : "text-red-600",
                   )}
                 >
-                  ${Number(myBalance.amount).toFixed(2)}
+                  {Number(myBalance.amount).toFixed(2)} ₴
                 </p>
               </div>
             </div>

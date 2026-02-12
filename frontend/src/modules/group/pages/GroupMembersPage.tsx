@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Combobox } from "@/components/ui/combobox";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,11 @@ import { cn } from "@/utils";
 import { Plus, UserMinus, Users } from "lucide-react";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+
+const ROLE_OPTIONS = GROUP_ROLES.map((r) => ({
+  value: r,
+  label: r.replace("_", " "),
+}));
 
 const AVATAR_GRADIENTS = [
   "from-orange-500 to-amber-500",
@@ -113,17 +119,13 @@ export function GroupMembersPage() {
               </div>
               <div className="space-y-2">
                 <Label>Role</Label>
-                <select
+                <Combobox
+                  options={ROLE_OPTIONS}
                   value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value)}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  {GROUP_ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {r.replace("_", " ")}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setInviteRole}
+                  placeholder="Select role..."
+                  searchPlaceholder="Search roles..."
+                />
               </div>
               <Button
                 onClick={handleInvite}
@@ -181,30 +183,28 @@ export function GroupMembersPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="text-[11px] text-muted-foreground space-x-1.5 hidden lg:flex">
-                      <span className="bg-muted px-1.5 py-0.5 rounded">M:{member.members_scope}</span>
-                      <span className="bg-muted px-1.5 py-0.5 rounded">O:{member.orders_scope}</span>
-                      <span className="bg-muted px-1.5 py-0.5 rounded">B:{member.balances_scope}</span>
-                      <span className="bg-muted px-1.5 py-0.5 rounded">A:{member.analytics_scope}</span>
-                      <span className="bg-muted px-1.5 py-0.5 rounded">R:{member.restaurants_scope}</span>
-                    </div>
-                    {!memberIsOwner && (isOwner || user?.is_admin) && (
-                      <>
-                        <select
-                          onChange={(e) =>
-                            handleRoleChange(member.user_id, e.target.value)
-                          }
-                          className="h-8 rounded-lg border border-input bg-background px-2 text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
-                          defaultValue=""
+                      {member.permissions.map((p) => (
+                        <span
+                          key={p.permission_type}
+                          className="bg-muted px-1.5 py-0.5 rounded"
                         >
-                          <option value="" disabled>
-                            Change role
-                          </option>
-                          {GROUP_ROLES.map((r) => (
-                            <option key={r} value={r}>
-                              {r.replace("_", " ")}
-                            </option>
-                          ))}
-                        </select>
+                          {p.permission_type.charAt(0).toUpperCase()}:{p.level}
+                        </span>
+                      ))}
+                    </div>
+                    {!memberIsOwner && (isOwner || user?.role === "admin") && (
+                      <>
+                        <div className="w-36">
+                          <Combobox
+                            options={ROLE_OPTIONS}
+                            value=""
+                            onChange={(val) => {
+                              if (val) handleRoleChange(member.user_id, val);
+                            }}
+                            placeholder="Change role"
+                            searchPlaceholder="Search roles..."
+                          />
+                        </div>
                         <Button
                           variant="ghost"
                           size="icon"

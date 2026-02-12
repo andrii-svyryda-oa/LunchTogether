@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.models.group import Group, GroupInvitation, GroupMember
+from app.models.group import Group, GroupInvitation, GroupMember, GroupMemberPermission
 from app.repositories.base import BaseRepository
 
 
@@ -30,7 +30,12 @@ class GroupRepository(BaseRepository[Group]):
 
     async def get_with_members(self, group_id: uuid.UUID) -> Group | None:
         query = (
-            select(Group).where(Group.id == group_id).options(joinedload(Group.members).joinedload(GroupMember.user))
+            select(Group)
+            .where(Group.id == group_id)
+            .options(
+                joinedload(Group.members).joinedload(GroupMember.user),
+                joinedload(Group.members).joinedload(GroupMember.permissions),
+            )
         )
         result = await self.session.execute(query)
         return result.unique().scalar_one_or_none()
@@ -41,15 +46,23 @@ class GroupMemberRepository(BaseRepository[GroupMember]):
         super().__init__(GroupMember, session)
 
     async def get_membership(self, user_id: uuid.UUID, group_id: uuid.UUID) -> GroupMember | None:
-        query = select(GroupMember).where(
-            GroupMember.user_id == user_id,
-            GroupMember.group_id == group_id,
+        query = (
+            select(GroupMember)
+            .where(
+                GroupMember.user_id == user_id,
+                GroupMember.group_id == group_id,
+            )
+            .options(joinedload(GroupMember.permissions))
         )
         result = await self.session.execute(query)
-        return result.scalar_one_or_none()
+        return result.unique().scalar_one_or_none()
 
     async def get_members_for_group(self, group_id: uuid.UUID) -> list[GroupMember]:
-        query = select(GroupMember).where(GroupMember.group_id == group_id).options(joinedload(GroupMember.user))
+        query = (
+            select(GroupMember)
+            .where(GroupMember.group_id == group_id)
+            .options(joinedload(GroupMember.user), joinedload(GroupMember.permissions))
+        )
         result = await self.session.execute(query)
         return list(result.unique().scalars().all())
 
@@ -71,6 +84,48 @@ class GroupMemberRepository(BaseRepository[GroupMember]):
         await self.session.delete(member)
         await self.session.flush()
         return True
+
+
+class GroupMemberPermissionRepository(BaseRepository[GroupMemberPermission]):
+    def __init__(self, session: AsyncSession):
+        super().__init__(GroupMemberPermission, session)
+
+    async def set_permissions(
+        self,
+        group_member_id: uuid.UUID,
+        permissions: dict[str, str],
+    ) -> list[GroupMemberPermission]:
+        """Set permissions for a group member. Creates or updates each permission type."""
+        result = []
+        for perm_type, level in permissions.items():
+            existing = await self.session.execute(
+                select(GroupMemberPermission).where(
+                    GroupMemberPermission.group_member_id == group_member_id,
+                    GroupMemberPermission.permission_type == perm_type,
+                )
+            )
+            existing_perm = existing.scalar_one_or_none()
+            if existing_perm:
+                existing_perm.level = level
+                await self.session.flush()
+                await self.session.refresh(existing_perm)
+                result.append(existing_perm)
+            else:
+                perm = GroupMemberPermission(
+                    group_member_id=group_member_id,
+                    permission_type=perm_type,
+                    level=level,
+                )
+                self.session.add(perm)
+                await self.session.flush()
+                await self.session.refresh(perm)
+                result.append(perm)
+        return result
+
+    async def get_for_member(self, group_member_id: uuid.UUID) -> list[GroupMemberPermission]:
+        query = select(GroupMemberPermission).where(GroupMemberPermission.group_member_id == group_member_id)
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
 
 
 class GroupInvitationRepository(BaseRepository[GroupInvitation]):

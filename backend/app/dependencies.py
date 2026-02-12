@@ -8,7 +8,12 @@ from app.core.security import decode_access_token
 from app.database import get_db
 from app.models.user import User
 from app.repositories.balance import BalanceHistoryRepository, BalanceRepository
-from app.repositories.group import GroupInvitationRepository, GroupMemberRepository, GroupRepository
+from app.repositories.group import (
+    GroupInvitationRepository,
+    GroupMemberPermissionRepository,
+    GroupMemberRepository,
+    GroupRepository,
+)
 from app.repositories.order import FavoriteDishRepository, OrderItemRepository, OrderRepository
 from app.repositories.restaurant import DishRepository, RestaurantRepository
 from app.repositories.user import UserRepository
@@ -34,6 +39,10 @@ def get_group_repository(session: AsyncSession = Depends(get_db)) -> GroupReposi
 
 def get_group_member_repository(session: AsyncSession = Depends(get_db)) -> GroupMemberRepository:
     return GroupMemberRepository(session)
+
+
+def get_group_member_permission_repository(session: AsyncSession = Depends(get_db)) -> GroupMemberPermissionRepository:
+    return GroupMemberPermissionRepository(session)
 
 
 def get_group_invitation_repository(session: AsyncSession = Depends(get_db)) -> GroupInvitationRepository:
@@ -86,16 +95,18 @@ def get_login_workflow(
 def get_create_group_workflow(
     group_repository: GroupRepository = Depends(get_group_repository),
     group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
+    permission_repository: GroupMemberPermissionRepository = Depends(get_group_member_permission_repository),
 ) -> CreateGroupWorkflow:
-    return CreateGroupWorkflow(group_repository, group_member_repository)
+    return CreateGroupWorkflow(group_repository, group_member_repository, permission_repository)
 
 
 def get_manage_members_workflow(
     group_repository: GroupRepository = Depends(get_group_repository),
     group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
     user_repository: UserRepository = Depends(get_user_repository),
+    permission_repository: GroupMemberPermissionRepository = Depends(get_group_member_permission_repository),
 ) -> ManageMembersWorkflow:
-    return ManageMembersWorkflow(group_repository, group_member_repository, user_repository)
+    return ManageMembersWorkflow(group_repository, group_member_repository, user_repository, permission_repository)
 
 
 def get_invite_workflow(
@@ -103,8 +114,11 @@ def get_invite_workflow(
     group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
     invitation_repository: GroupInvitationRepository = Depends(get_group_invitation_repository),
     user_repository: UserRepository = Depends(get_user_repository),
+    permission_repository: GroupMemberPermissionRepository = Depends(get_group_member_permission_repository),
 ) -> InviteWorkflow:
-    return InviteWorkflow(group_repository, group_member_repository, invitation_repository, user_repository)
+    return InviteWorkflow(
+        group_repository, group_member_repository, invitation_repository, user_repository, permission_repository
+    )
 
 
 def get_create_order_workflow(
@@ -174,6 +188,8 @@ async def get_current_user(
 async def get_current_admin(
     current_user: User = Depends(get_current_user),
 ) -> User:
-    if not current_user.is_admin:
+    from app.models.enums import UserRole
+
+    if current_user.role != UserRole.ADMIN:
         raise ForbiddenError(detail="Admin access required")
     return current_user

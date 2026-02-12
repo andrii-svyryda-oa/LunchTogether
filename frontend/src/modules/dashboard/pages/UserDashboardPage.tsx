@@ -74,7 +74,9 @@ export function UserDashboardPage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 group-hover:scale-105 transition-transform">
                 <Users className="h-5 w-5" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground">Groups</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Groups
+              </p>
             </div>
             <p className="text-3xl font-bold">{analytics.total_groups}</p>
           </Card>
@@ -98,10 +100,12 @@ export function UserDashboardPage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-600 group-hover:scale-105 transition-transform">
                 <DollarSign className="h-5 w-5" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground">Total Spent</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Total Spent
+              </p>
             </div>
             <p className="text-3xl font-bold">
-              ${Number(analytics.total_spent).toFixed(2)}
+              {Number(analytics.total_spent).toFixed(2)} ₴
             </p>
           </Card>
 
@@ -110,10 +114,12 @@ export function UserDashboardPage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 group-hover:scale-105 transition-transform">
                 <TrendingUp className="h-5 w-5" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground">Avg. Order Value</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Avg. Order Value
+              </p>
             </div>
             <p className="text-3xl font-bold">
-              ${Number(analytics.average_order_value).toFixed(2)}
+              {Number(analytics.average_order_value).toFixed(2)} ₴
             </p>
           </Card>
 
@@ -143,7 +149,9 @@ export function UserDashboardPage() {
               >
                 <DollarSign className="h-5 w-5" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground">Total Balance</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Total Balance
+              </p>
             </div>
             <p
               className={cn(
@@ -153,7 +161,7 @@ export function UserDashboardPage() {
                   : "text-red-600",
               )}
             >
-              ${Number(analytics.total_balance_across_groups).toFixed(2)}
+              {Number(analytics.total_balance_across_groups).toFixed(2)} ₴
             </p>
           </Card>
         </div>
@@ -162,7 +170,12 @@ export function UserDashboardPage() {
       {/* Quick group access */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Your Groups</h2>
-        <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
+        <Button
+          variant="ghost"
+          size="sm"
+          asChild
+          className="text-muted-foreground"
+        >
           <Link to="/groups">
             View all
             <ArrowRight className="ml-1 h-4 w-4" />
@@ -179,7 +192,10 @@ export function UserDashboardPage() {
             No groups yet
           </p>
           <p className="text-sm text-muted-foreground">
-            <Link to="/groups" className="text-primary hover:underline font-medium">
+            <Link
+              to="/groups"
+              className="text-primary hover:underline font-medium"
+            >
               Create one
             </Link>{" "}
             to start ordering lunch together

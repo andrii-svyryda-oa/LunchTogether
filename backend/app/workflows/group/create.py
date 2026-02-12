@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from app.core.exceptions import ForbiddenError
 from app.models.enums import GROUP_ROLE_PRESETS, GroupRole
 from app.models.user import User
-from app.repositories.group import GroupMemberRepository, GroupRepository
+from app.repositories.group import GroupMemberPermissionRepository, GroupMemberRepository, GroupRepository
 from app.schemas.group import GroupCreate, GroupResponse
 
 
@@ -27,9 +27,11 @@ class CreateGroupWorkflow:
         self,
         group_repository: GroupRepository,
         group_member_repository: GroupMemberRepository,
+        permission_repository: GroupMemberPermissionRepository,
     ):
         self.group_repository = group_repository
         self.group_member_repository = group_member_repository
+        self.permission_repository = permission_repository
 
     async def execute(self, input_data: CreateGroupInput) -> CreateGroupOutput:
         user: User = input_data.current_user  # type: ignore[assignment]
@@ -50,13 +52,18 @@ class CreateGroupWorkflow:
         )
 
         # Add the creator as a member with Admin role
-        admin_presets = GROUP_ROLE_PRESETS[GroupRole.ADMIN]
-        await self.group_member_repository.create(
+        member = await self.group_member_repository.create(
             {
                 "user_id": user.id,
                 "group_id": group.id,
-                **admin_presets,
             }
+        )
+
+        # Set Admin role permissions
+        admin_presets = GROUP_ROLE_PRESETS[GroupRole.ADMIN]
+        await self.permission_repository.set_permissions(
+            member.id,
+            {pt.value: level for pt, level in admin_presets.items()},
         )
 
         return CreateGroupOutput(group=GroupResponse.model_validate(group))

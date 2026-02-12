@@ -9,7 +9,7 @@ from app.dependencies import (
     get_group_member_repository,
     get_restaurant_repository,
 )
-from app.models.enums import RestaurantsScope
+from app.models.enums import PermissionType, RestaurantsScope
 from app.models.user import User
 from app.repositories.group import GroupMemberRepository
 from app.repositories.restaurant import DishRepository, RestaurantRepository
@@ -38,7 +38,7 @@ async def _check_restaurant_permission(
     membership = await group_member_repository.get_membership(user.id, group_id)
     if membership is None:
         raise ForbiddenError(detail="You are not a member of this group")
-    if require_editor and membership.restaurants_scope != RestaurantsScope.EDITOR:
+    if require_editor and membership.get_permission(PermissionType.RESTAURANTS) != RestaurantsScope.EDITOR:
         raise ForbiddenError(detail="You do not have permission to manage restaurants")
 
 

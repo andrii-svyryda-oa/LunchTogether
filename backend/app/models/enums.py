@@ -1,6 +1,19 @@
 import enum
 
 
+class UserRole(str, enum.Enum):
+    ADMIN = "admin"
+    USER = "user"
+
+
+class PermissionType(str, enum.Enum):
+    MEMBERS = "members"
+    ORDERS = "orders"
+    BALANCES = "balances"
+    ANALYTICS = "analytics"
+    RESTAURANTS = "restaurants"
+
+
 class MembersScope(str, enum.Enum):
     EDITOR = "editor"
     VIEWER = "viewer"
@@ -37,28 +50,28 @@ class GroupRole(str, enum.Enum):
     MEMBER = "member"
 
 
-# Role preset definitions mapping role -> scope values
-GROUP_ROLE_PRESETS: dict[GroupRole, dict[str, str]] = {
+# Role preset definitions mapping role -> {permission_type: level}
+GROUP_ROLE_PRESETS: dict[GroupRole, dict[PermissionType, str]] = {
     GroupRole.ADMIN: {
-        "members_scope": MembersScope.EDITOR,
-        "orders_scope": OrdersScope.EDITOR,
-        "balances_scope": BalancesScope.EDITOR,
-        "analytics_scope": AnalyticsScope.VIEWER,
-        "restaurants_scope": RestaurantsScope.EDITOR,
+        PermissionType.MEMBERS: MembersScope.EDITOR,
+        PermissionType.ORDERS: OrdersScope.EDITOR,
+        PermissionType.BALANCES: BalancesScope.EDITOR,
+        PermissionType.ANALYTICS: AnalyticsScope.VIEWER,
+        PermissionType.RESTAURANTS: RestaurantsScope.EDITOR,
     },
     GroupRole.SUPERVISOR_MEMBER: {
-        "members_scope": MembersScope.VIEWER,
-        "orders_scope": OrdersScope.INITIATOR,
-        "balances_scope": BalancesScope.VIEWER,
-        "analytics_scope": AnalyticsScope.VIEWER,
-        "restaurants_scope": RestaurantsScope.VIEWER,
+        PermissionType.MEMBERS: MembersScope.VIEWER,
+        PermissionType.ORDERS: OrdersScope.INITIATOR,
+        PermissionType.BALANCES: BalancesScope.VIEWER,
+        PermissionType.ANALYTICS: AnalyticsScope.VIEWER,
+        PermissionType.RESTAURANTS: RestaurantsScope.VIEWER,
     },
     GroupRole.MEMBER: {
-        "members_scope": MembersScope.NONE,
-        "orders_scope": OrdersScope.PARTICIPANT,
-        "balances_scope": BalancesScope.NONE,
-        "analytics_scope": AnalyticsScope.NONE,
-        "restaurants_scope": RestaurantsScope.VIEWER,
+        PermissionType.MEMBERS: MembersScope.NONE,
+        PermissionType.ORDERS: OrdersScope.PARTICIPANT,
+        PermissionType.BALANCES: BalancesScope.NONE,
+        PermissionType.ANALYTICS: AnalyticsScope.NONE,
+        PermissionType.RESTAURANTS: RestaurantsScope.VIEWER,
     },
 }
 
