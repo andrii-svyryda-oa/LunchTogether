@@ -11,16 +11,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks";
+import { useGetGroupMembersQuery } from "@/store/api/groupApi";
 import {
   useAddOrderItemMutation,
   useDeleteOrderItemMutation,
   useGetOrderQuery,
   useSetDeliveryFeeMutation,
+  useUpdateOrderItemMutation,
   useUpdateOrderStatusMutation,
 } from "@/store/api/orderApi";
+import type { OrderItem } from "@/types";
 import { cn } from "@/utils";
 import {
   DollarSign,
+  Minus,
+  Pencil,
   Plus,
   ShoppingCart,
   Trash2,
@@ -71,20 +76,45 @@ export function OrderDetailPage() {
     groupId: groupId!,
     orderId: orderId!,
   });
+  const { data: groupMembers } = useGetGroupMembersQuery(groupId!, {
+    skip: !groupId,
+  });
   const [updateStatus] = useUpdateOrderStatusMutation();
   const [addItem] = useAddOrderItemMutation();
+  const [updateItem] = useUpdateOrderItemMutation();
   const [deleteItem] = useDeleteOrderItemMutation();
   const [setDeliveryFee] = useSetDeliveryFeeMutation();
 
   // Add item state
   const [addOpen, setAddOpen] = useState(false);
+  const [addForUserId, setAddForUserId] = useState<string | null>(null);
   const [itemName, setItemName] = useState("");
   const [itemDetail, setItemDetail] = useState("");
   const [itemPrice, setItemPrice] = useState("");
+  const [itemQuantity, setItemQuantity] = useState("1");
+
+  // Edit item state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editItem, setEditItem] = useState<OrderItem | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDetail, setEditDetail] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editQuantity, setEditQuantity] = useState("1");
 
   // Delivery fee state
   const [feeOpen, setFeeOpen] = useState(false);
   const [feeTotal, setFeeTotal] = useState("");
+
+  // Add for member dialog state (confirmed state)
+  const [memberPickerOpen, setMemberPickerOpen] = useState(false);
+
+  const resetAddForm = () => {
+    setItemName("");
+    setItemDetail("");
+    setItemPrice("");
+    setItemQuantity("1");
+    setAddForUserId(null);
+  };
 
   const handleAddItem = async () => {
     try {
@@ -95,12 +125,42 @@ export function OrderDetailPage() {
           name: itemName,
           detail: itemDetail || undefined,
           price: parseFloat(itemPrice),
+          quantity: parseInt(itemQuantity) || 1,
+          user_id: addForUserId || undefined,
         },
       }).unwrap();
       setAddOpen(false);
-      setItemName("");
-      setItemDetail("");
-      setItemPrice("");
+      resetAddForm();
+    } catch {
+      // handled
+    }
+  };
+
+  const openEditDialog = (item: OrderItem) => {
+    setEditItem(item);
+    setEditName(item.name);
+    setEditDetail(item.detail ?? "");
+    setEditPrice(String(item.price));
+    setEditQuantity(String(item.quantity ?? 1));
+    setEditOpen(true);
+  };
+
+  const handleEditItem = async () => {
+    if (!editItem) return;
+    try {
+      await updateItem({
+        groupId: groupId!,
+        orderId: orderId!,
+        itemId: editItem.id,
+        data: {
+          name: editName,
+          detail: editDetail || undefined,
+          price: parseFloat(editPrice),
+          quantity: parseInt(editQuantity) || 1,
+        },
+      }).unwrap();
+      setEditOpen(false);
+      setEditItem(null);
     } catch {
       // handled
     }
@@ -134,6 +194,18 @@ export function OrderDetailPage() {
     }
   };
 
+  const openAddForMember = (userId: string) => {
+    setAddForUserId(userId);
+    resetAddForm();
+    setAddForUserId(userId);
+    setAddOpen(true);
+  };
+
+  const openAddForSelf = () => {
+    resetAddForm();
+    setAddOpen(true);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -147,18 +219,35 @@ export function OrderDetailPage() {
   }
 
   const isInitiator = order.initiator_id === user?.id;
-  const canEdit = order.status === "initiated";
+  const canEditInitiated = order.status === "initiated";
+  const canEditConfirmed =
+    order.status === "confirmed" &&
+    (isInitiator || user?.role === "admin");
+  const canEdit = canEditInitiated || canEditConfirmed;
   const canManage = isInitiator || user?.role === "admin";
   const nextAction = NEXT_STATUS[order.status];
   const style = STATUS_STYLES[order.status] ?? STATUS_STYLES.initiated;
 
   // Group items by user
-  const itemsByUser = order.items.reduce((acc, item) => {
-    const key = item.user_full_name ?? item.user_id;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(item);
-    return acc;
-  }, {} as Record<string, typeof order.items>);
+  const itemsByUser = order.items.reduce(
+    (acc, item) => {
+      const key = item.user_id;
+      if (!acc[key]) acc[key] = { name: item.user_full_name ?? item.user_id, items: [] };
+      acc[key].items.push(item);
+      return acc;
+    },
+    {} as Record<string, { name: string; items: typeof order.items }>,
+  );
+
+  // Get members not currently in the order (for "Add member dish" in confirmed state)
+  const existingParticipantIds = new Set(Object.keys(itemsByUser));
+  const availableMembers = groupMembers?.filter(
+    (m) => !existingParticipantIds.has(m.user_id),
+  );
+
+  // Calculate per-user subtotals
+  const getUserSubtotal = (items: typeof order.items) =>
+    items.reduce((sum, item) => sum + Number(item.price) * (item.quantity ?? 1), 0);
 
   return (
     <div>
@@ -173,7 +262,7 @@ export function OrderDetailPage() {
               className={cn(
                 "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium",
                 style.bg,
-                style.text
+                style.text,
               )}
             >
               <span className={cn("h-1.5 w-1.5 rounded-full", style.dot)} />
@@ -215,108 +304,130 @@ export function OrderDetailPage() {
           </p>
         </Card>
 
-        <Card className="p-5 hover:shadow-md group">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600 group-hover:scale-105 transition-transform">
-              <Truck className="h-5 w-5" />
+        <Dialog open={feeOpen} onOpenChange={setFeeOpen}>
+          <Card className="p-5 hover:shadow-md group relative">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600 group-hover:scale-105 transition-transform">
+                <Truck className="h-5 w-5" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">
+                Delivery Fee
+              </p>
+              {canManage &&
+                order.status !== "finished" &&
+                order.status !== "cancelled" && (
+                <DialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-3 right-3 h-7 w-7 text-muted-foreground hover:text-primary"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                </DialogTrigger>
+              )}
             </div>
-            <p className="text-sm font-medium text-muted-foreground">
-              Delivery Fee
+            <p className="text-2xl font-bold">
+              {order.delivery_fee_total
+                ? `${Number(order.delivery_fee_total).toFixed(2)} ₴`
+                : "\u2014"}
             </p>
-          </div>
-          <p className="text-2xl font-bold">
-            {order.delivery_fee_total
-              ? `${Number(order.delivery_fee_total).toFixed(2)} ₴`
-              : "\u2014"}
-          </p>
-        </Card>
+          </Card>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Set Delivery/Packing Fee</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Total Fee (divided equally)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={feeTotal}
+                  onChange={(e) => setFeeTotal(e.target.value)}
+                  placeholder="5.00"
+                />
+              </div>
+              <Button
+                onClick={handleSetFee}
+                disabled={!feeTotal}
+                className="w-full"
+              >
+                Set Fee
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Actions */}
       <div className="flex flex-wrap gap-2 mb-8">
-        {canEdit && (
-          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        {canEditInitiated && (
+          <Button
+            className="shadow-md shadow-primary/20"
+            onClick={openAddForSelf}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Dish
+          </Button>
+        )}
+
+        {canEditConfirmed && (
+          <Dialog open={memberPickerOpen} onOpenChange={setMemberPickerOpen}>
             <DialogTrigger asChild>
               <Button className="shadow-md shadow-primary/20">
                 <Plus className="mr-2 h-4 w-4" />
-                Add Dish
+                Add Dish for Member
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add Your Dish</DialogTitle>
+                <DialogTitle>Select Member</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label>Dish Name</Label>
-                  <Input
-                    value={itemName}
-                    onChange={(e) => setItemName(e.target.value)}
-                    placeholder="Burger"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Detail (optional)</Label>
-                  <Input
-                    value={itemDetail}
-                    onChange={(e) => setItemDetail(e.target.value)}
-                    placeholder="No onions"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Price</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={itemPrice}
-                    onChange={(e) => setItemPrice(e.target.value)}
-                    placeholder="9.99"
-                  />
-                </div>
-                <Button
-                  onClick={handleAddItem}
-                  disabled={!itemName.trim() || !itemPrice}
-                  className="w-full"
-                >
-                  Add
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
-
-        {order.status === "confirmed" && canManage && (
-          <Dialog open={feeOpen} onOpenChange={setFeeOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <DollarSign className="mr-2 h-4 w-4" />
-                Set Delivery Fee
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Set Delivery/Packing Fee</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label>Total Fee (divided equally)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={feeTotal}
-                    onChange={(e) => setFeeTotal(e.target.value)}
-                    placeholder="5.00"
-                  />
-                </div>
-                <Button
-                  onClick={handleSetFee}
-                  disabled={!feeTotal}
-                  className="w-full"
-                >
-                  Set Fee
-                </Button>
+              <div className="space-y-2 pt-4 max-h-80 overflow-y-auto">
+                {/* Existing participants */}
+                {Object.entries(itemsByUser).map(([userId, { name }]) => (
+                  <Button
+                    key={userId}
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setMemberPickerOpen(false);
+                      openAddForMember(userId);
+                    }}
+                  >
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold mr-2 shrink-0">
+                      {name.charAt(0).toUpperCase()}
+                    </div>
+                    {name}
+                  </Button>
+                ))}
+                {/* Members not yet in order */}
+                {availableMembers && availableMembers.length > 0 && (
+                  <>
+                    {Object.keys(itemsByUser).length > 0 && (
+                      <div className="border-t my-2" />
+                    )}
+                    <p className="text-xs text-muted-foreground px-1 pb-1">Other group members</p>
+                    {availableMembers.map((member) => (
+                      <Button
+                        key={member.user_id}
+                        variant="outline"
+                        className="w-full justify-start"
+                        onClick={() => {
+                          setMemberPickerOpen(false);
+                          openAddForMember(member.user_id);
+                        }}
+                      >
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-muted-foreground text-[10px] font-bold mr-2 shrink-0">
+                          {(member.user_full_name ?? "?").charAt(0).toUpperCase()}
+                        </div>
+                        {member.user_full_name ?? member.user_email}
+                      </Button>
+                    ))}
+                  </>
+                )}
               </div>
             </DialogContent>
           </Dialog>
@@ -340,6 +451,174 @@ export function OrderDetailPage() {
           )}
       </div>
 
+      {/* Add Item Dialog */}
+      <Dialog open={addOpen} onOpenChange={(open) => { setAddOpen(open); if (!open) resetAddForm(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {addForUserId
+                ? `Add Dish${addForUserId !== user?.id ? " for Member" : ""}`
+                : "Add Your Dish"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label>Dish Name</Label>
+              <Input
+                value={itemName}
+                onChange={(e) => setItemName(e.target.value)}
+                placeholder="Burger"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Detail (optional)</Label>
+              <Input
+                value={itemDetail}
+                onChange={(e) => setItemDetail(e.target.value)}
+                placeholder="No onions"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Price</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={itemPrice}
+                  onChange={(e) => setItemPrice(e.target.value)}
+                  placeholder="9.99"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Quantity</Label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={() =>
+                      setItemQuantity(String(Math.max(1, parseInt(itemQuantity) - 1)))
+                    }
+                    disabled={parseInt(itemQuantity) <= 1}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={itemQuantity}
+                    onChange={(e) => setItemQuantity(e.target.value)}
+                    className="text-center"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={() =>
+                      setItemQuantity(String(parseInt(itemQuantity) + 1))
+                    }
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <Button
+              onClick={handleAddItem}
+              disabled={!itemName.trim() || !itemPrice}
+              className="w-full"
+            >
+              Add
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Item Dialog */}
+      <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) setEditItem(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Dish</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label>Dish Name</Label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Burger"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Detail (optional)</Label>
+              <Input
+                value={editDetail}
+                onChange={(e) => setEditDetail(e.target.value)}
+                placeholder="No onions"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Price</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editPrice}
+                  onChange={(e) => setEditPrice(e.target.value)}
+                  placeholder="9.99"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Quantity</Label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={() =>
+                      setEditQuantity(String(Math.max(1, parseInt(editQuantity) - 1)))
+                    }
+                    disabled={parseInt(editQuantity) <= 1}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={editQuantity}
+                    onChange={(e) => setEditQuantity(e.target.value)}
+                    className="text-center"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={() =>
+                      setEditQuantity(String(parseInt(editQuantity) + 1))
+                    }
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <Button
+              onClick={handleEditItem}
+              disabled={!editName.trim() || !editPrice}
+              className="w-full"
+            >
+              Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Items grouped by user */}
       <h2 className="text-xl font-semibold mb-4">Order Items</h2>
       {Object.entries(itemsByUser).length === 0 ? (
@@ -354,49 +633,101 @@ export function OrderDetailPage() {
         </Card>
       ) : (
         <div className="space-y-6">
-          {Object.entries(itemsByUser).map(([userName, items]) => (
-            <div key={userName}>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold shrink-0">
-                  {userName.charAt(0).toUpperCase()}
-                </div>
-                <h3 className="font-medium text-sm">{userName}</h3>
-              </div>
-              <div className="space-y-2 ml-9">
-                {items.map((item) => (
-                  <Card key={item.id} className="p-3.5 hover:shadow-md">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{item.name}</p>
-                        {item.detail && (
-                          <p className="text-sm text-muted-foreground">
-                            {item.detail}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-semibold text-primary">
-                          {Number(item.price).toFixed(2)} ₴
-                        </span>
-                        {canEdit &&
-                          (item.user_id === user?.id ||
-                            user?.role === "admin") && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteItem(item.id)}
-                              className="text-muted-foreground hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                      </div>
+          {Object.entries(itemsByUser).map(([userId, { name, items }]) => {
+            const subtotal = getUserSubtotal(items);
+            const deliveryShare = order.delivery_fee_per_person
+              ? Number(order.delivery_fee_per_person)
+              : 0;
+            const memberTotal = subtotal + deliveryShare;
+
+            return (
+              <div key={userId}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold shrink-0">
+                      {name.charAt(0).toUpperCase()}
                     </div>
-                  </Card>
-                ))}
+                    <h3 className="font-medium text-sm">{name}</h3>
+                    <span className="text-xs text-muted-foreground ml-1">
+                      {subtotal.toFixed(2)} ₴
+                      {deliveryShare > 0 && (
+                        <span> + {deliveryShare.toFixed(2)} ₴ delivery</span>
+                      )}
+                      {deliveryShare > 0 && (
+                        <span className="font-semibold text-foreground ml-1">
+                          = {memberTotal.toFixed(2)} ₴
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  {canEditConfirmed && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openAddForMember(userId)}
+                      className="text-muted-foreground hover:text-primary"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add
+                    </Button>
+                  )}
+                </div>
+                <div className="space-y-2 ml-9">
+                  {items.map((item) => (
+                    <Card key={item.id} className="p-3.5 hover:shadow-md">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{item.name}</p>
+                            {(item.quantity ?? 1) > 1 && (
+                              <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded-md font-medium">
+                                x{item.quantity}
+                              </span>
+                            )}
+                          </div>
+                          {item.detail && (
+                            <p className="text-sm text-muted-foreground">
+                              {item.detail}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="font-semibold text-primary">
+                            {(item.quantity ?? 1) > 1
+                              ? `${Number(item.price).toFixed(2)} × ${item.quantity} = ${(Number(item.price) * (item.quantity ?? 1)).toFixed(2)} ₴`
+                              : `${Number(item.price).toFixed(2)} ₴`}
+                          </span>
+                          {canEdit &&
+                            (canEditConfirmed ||
+                              item.user_id === user?.id ||
+                              user?.role === "admin") && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openEditDialog(item)}
+                                  className="text-muted-foreground hover:text-primary"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteItem(item.id)}
+                                  className="text-muted-foreground hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import Boolean, ForeignKey, Numeric, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -93,6 +93,11 @@ class OrderItem(BaseModel):
         UUID(as_uuid=True),
         ForeignKey("dishes.id", ondelete="SET NULL"),
         nullable=True,
+    )
+    quantity: Mapped[int] = mapped_column(
+        Integer,
+        default=1,
+        nullable=False,
     )
 
     # Relationships

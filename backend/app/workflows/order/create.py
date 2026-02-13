@@ -59,17 +59,33 @@ class CreateOrderWorkflow:
         if active_order is not None:
             raise ForbiddenError(detail="There is already an active order in this group")
 
-        # Resolve restaurant name
+        # Resolve restaurant
+        restaurant_id = input_data.data.restaurant_id
         restaurant_name = input_data.data.restaurant_name
-        if input_data.data.restaurant_id:
-            restaurant = await self.restaurant_repository.get_by_id(input_data.data.restaurant_id)
+
+        if restaurant_id:
+            # Existing restaurant selected — use its name
+            restaurant = await self.restaurant_repository.get_by_id(restaurant_id)
             if restaurant:
                 restaurant_name = restaurant.name
+        elif restaurant_name:
+            # Custom restaurant name entered — find or create a restaurant in this group
+            existing = await self.restaurant_repository.get_by_name_and_group(restaurant_name, input_data.group_id)
+            if existing:
+                restaurant_id = existing.id
+            else:
+                new_restaurant = await self.restaurant_repository.create(
+                    {
+                        "name": restaurant_name,
+                        "group_id": input_data.group_id,
+                    }
+                )
+                restaurant_id = new_restaurant.id
 
         order = await self.order_repository.create(
             {
                 "group_id": input_data.group_id,
-                "restaurant_id": input_data.data.restaurant_id,
+                "restaurant_id": restaurant_id,
                 "restaurant_name": restaurant_name,
                 "initiator_id": user.id,
                 "status": OrderStatus.INITIATED,

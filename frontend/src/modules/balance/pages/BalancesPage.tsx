@@ -1,12 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Combobox } from "@/components/ui/combobox";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +14,7 @@ import {
   useGetBalanceHistoryQuery,
   useGetBalancesQuery,
 } from "@/store/api/balanceApi";
+import type { Balance } from "@/types";
 import { cn } from "@/utils";
 import { ChevronUp, History, Plus, Wallet } from "lucide-react";
 import { useState } from "react";
@@ -27,9 +26,8 @@ export function BalancesPage() {
   const { data: balances, isLoading } = useGetBalancesQuery(groupId!);
   const [adjustBalance] = useAdjustBalanceMutation();
 
-  // Adjust state
-  const [adjustOpen, setAdjustOpen] = useState(false);
-  const [adjustUserId, setAdjustUserId] = useState("");
+  // Adjust state — tracks which user's dialog is open
+  const [adjustTarget, setAdjustTarget] = useState<Balance | null>(null);
   const [adjustAmount, setAdjustAmount] = useState("");
   const [adjustNote, setAdjustNote] = useState("");
 
@@ -40,20 +38,30 @@ export function BalancesPage() {
     { skip: !historyUserId }
   );
 
+  const openAdjustDialog = (balance: Balance) => {
+    setAdjustTarget(balance);
+    setAdjustAmount("");
+    setAdjustNote("");
+  };
+
+  const closeAdjustDialog = () => {
+    setAdjustTarget(null);
+    setAdjustAmount("");
+    setAdjustNote("");
+  };
+
   const handleAdjust = async () => {
+    if (!adjustTarget) return;
     try {
       await adjustBalance({
         groupId: groupId!,
         data: {
-          user_id: adjustUserId,
+          user_id: adjustTarget.user_id,
           amount: parseFloat(adjustAmount),
           note: adjustNote || undefined,
         },
       }).unwrap();
-      setAdjustOpen(false);
-      setAdjustUserId("");
-      setAdjustAmount("");
-      setAdjustNote("");
+      closeAdjustDialog();
     } catch {
       // handled
     }
@@ -69,67 +77,61 @@ export function BalancesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Balances</h1>
-          <p className="text-muted-foreground mt-1">
-            Track who owes what in this group.
-          </p>
-        </div>
-        <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
-          <DialogTrigger asChild>
-            <Button className="shadow-md shadow-primary/20">
-              <Plus className="mr-2 h-4 w-4" />
-              Adjust Balance
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Adjust Balance</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>Member</Label>
-                <Combobox
-                  options={(balances ?? []).map((b) => ({
-                    value: b.user_id,
-                    label: b.user_full_name ?? b.user_id,
-                  }))}
-                  value={adjustUserId}
-                  onChange={setAdjustUserId}
-                  placeholder="Select member..."
-                  searchPlaceholder="Search members..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Amount (positive to add, negative to subtract)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={adjustAmount}
-                  onChange={(e) => setAdjustAmount(e.target.value)}
-                  placeholder="10.00"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Note (optional)</Label>
-                <Input
-                  value={adjustNote}
-                  onChange={(e) => setAdjustNote(e.target.value)}
-                  placeholder="Payment received"
-                />
-              </div>
-              <Button
-                onClick={handleAdjust}
-                disabled={!adjustUserId || !adjustAmount}
-                className="w-full"
-              >
-                Apply Adjustment
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">Balances</h1>
+        <p className="text-muted-foreground mt-1">
+          Track who owes what in this group.
+        </p>
       </div>
+
+      {/* Per-person adjust dialog */}
+      <Dialog open={!!adjustTarget} onOpenChange={(open) => !open && closeAdjustDialog()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Adjust Balance — {adjustTarget?.user_full_name ?? "Member"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label>Amount (positive to add, negative to subtract)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={adjustAmount}
+                onChange={(e) => setAdjustAmount(e.target.value)}
+                placeholder="10.00"
+              />
+              {adjustTarget && Number(adjustTarget.amount) < 0 && (
+                <button
+                  type="button"
+                  className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold text-muted-foreground cursor-pointer hover:bg-accent transition-colors"
+                  onClick={() =>
+                    setAdjustAmount(String(Math.abs(Number(adjustTarget.amount))))
+                  }
+                >
+                  +{Math.abs(Number(adjustTarget.amount)).toFixed(2)}
+                </button>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Note (optional)</Label>
+              <Input
+                value={adjustNote}
+                onChange={(e) => setAdjustNote(e.target.value)}
+                placeholder="Payment received"
+              />
+            </div>
+            <Button
+              onClick={handleAdjust}
+              disabled={!adjustAmount}
+              className="w-full"
+            >
+              Apply Adjustment
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Balance list */}
       {balances && balances.length === 0 ? (
@@ -176,6 +178,15 @@ export function BalancesPage() {
                       >
                         {Number(balance.amount).toFixed(2)} ₴
                       </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openAdjustDialog(balance)}
+                        className="text-muted-foreground"
+                        title="Adjust balance"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"

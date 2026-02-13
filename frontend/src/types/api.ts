@@ -119,12 +119,15 @@ export interface OrderItemCreateRequest {
   detail?: string;
   price: number;
   dish_id?: string;
+  quantity?: number;
+  user_id?: string;
 }
 
 export interface OrderItemUpdateRequest {
   name?: string;
   detail?: string;
   price?: number;
+  quantity?: number;
 }
 
 export interface OrderSetDeliveryFeeRequest {

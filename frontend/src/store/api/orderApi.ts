@@ -57,6 +57,7 @@ export const orderApi = baseApi.injectEndpoints({
       invalidatesTags: [
         { type: "Order" as const, id: "LIST" },
         { type: "Order" as const, id: "ACTIVE" },
+        { type: "Restaurant" as const, id: "LIST" },
       ],
     }),
 
@@ -124,8 +125,9 @@ export const orderApi = baseApi.injectEndpoints({
         method: "POST",
         body: data,
       }),
-      invalidatesTags: [
+      invalidatesTags: (_result, _error, { orderId }) => [
         { type: "OrderItem" as const, id: "LIST" },
+        { type: "Order" as const, id: orderId },
         { type: "Order" as const, id: "ACTIVE" },
       ],
     }),
@@ -144,8 +146,9 @@ export const orderApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: data,
       }),
-      invalidatesTags: [
+      invalidatesTags: (_result, _error, { orderId }) => [
         { type: "OrderItem" as const, id: "LIST" },
+        { type: "Order" as const, id: orderId },
         { type: "Order" as const, id: "ACTIVE" },
       ],
     }),
@@ -158,8 +161,9 @@ export const orderApi = baseApi.injectEndpoints({
         url: API_ENDPOINTS.ORDERS.ITEM_DETAIL(groupId, orderId, itemId),
         method: "DELETE",
       }),
-      invalidatesTags: [
+      invalidatesTags: (_result, _error, { orderId }) => [
         { type: "OrderItem" as const, id: "LIST" },
+        { type: "Order" as const, id: orderId },
         { type: "Order" as const, id: "ACTIVE" },
       ],
     }),

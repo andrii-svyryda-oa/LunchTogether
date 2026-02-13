@@ -152,23 +152,6 @@ export function UserDashboardPage() {
           </Card>
         </div>
       )}
-
-      {/* Quick group access */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">Your Groups</h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          asChild
-          className="text-muted-foreground"
-        >
-          <Link to="/groups">
-            View all
-            <ArrowRight className="ml-1 h-4 w-4" />
-          </Link>
-        </Button>
-      </div>
-
       {groups && groups.length === 0 ? (
         <Card className="flex flex-col items-center justify-center py-16 border-dashed">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted mb-4">

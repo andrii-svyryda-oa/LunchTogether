@@ -16,15 +16,27 @@ import {
   UtensilsCrossed,
   Wallet,
 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 export function GroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { data: group, isLoading, error } = useGetGroupQuery(groupId!);
   const { data: activeOrder } = useGetActiveOrderQuery(groupId!);
   const { data: analytics } = useGetGroupAnalyticsQuery(groupId!);
   const { data: myBalance } = useGetMyBalanceQuery(groupId!);
+
+  // Auto-navigate to active order only when entering via group icon (not explicit dashboard click)
+  const shouldAutoNavigate = (location.state as { autoNavigate?: boolean })?.autoNavigate === true;
+
+  useEffect(() => {
+    if (shouldAutoNavigate && user?.navigate_to_active_order && activeOrder?.id && groupId) {
+      navigate(`/groups/${groupId}/orders/${activeOrder.id}`, { replace: true });
+    }
+  }, [shouldAutoNavigate, user?.navigate_to_active_order, activeOrder?.id, groupId, navigate]);
 
   if (isLoading) {
     return (

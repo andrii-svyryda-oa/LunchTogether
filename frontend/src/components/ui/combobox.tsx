@@ -90,7 +90,7 @@ export function Combobox({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={searchPlaceholder}
-            className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
+            className="flex h-9 w-full bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
           />
         </div>
 
@@ -100,7 +100,7 @@ export function Combobox({
           <button
             type="button"
             className={cn(
-              "relative flex w-full cursor-pointer select-none items-center rounded-md px-2 py-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+              "relative flex w-full cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm outline-none transition-colors duration-150 hover:bg-accent hover:text-accent-foreground",
               !value && "bg-accent text-accent-foreground",
             )}
             onClick={() => {
@@ -122,8 +122,8 @@ export function Combobox({
               key={option.value}
               type="button"
               className={cn(
-                "relative flex w-full cursor-pointer select-none items-center rounded-md px-2 py-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
-                value === option.value && "bg-accent text-accent-foreground",
+              "relative flex w-full cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm outline-none transition-colors duration-150 hover:bg-accent hover:text-accent-foreground",
+              value === option.value && "bg-accent text-accent-foreground",
               )}
               onClick={() => {
                 onChange(option.value);
@@ -150,7 +150,7 @@ export function Combobox({
           {showCreate && (
             <button
               type="button"
-              className="relative flex w-full cursor-pointer select-none items-center rounded-md px-2 py-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground text-primary font-medium"
+              className="relative flex w-full cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm outline-none transition-colors duration-150 hover:bg-accent hover:text-accent-foreground text-primary font-medium"
               onClick={() => {
                 if (onCreateNew) {
                   onCreateNew(search.trim());

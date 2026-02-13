@@ -17,6 +17,14 @@ class RestaurantRepository(BaseRepository[Restaurant]):
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
+    async def get_by_name_and_group(self, name: str, group_id: uuid.UUID) -> Restaurant | None:
+        query = select(Restaurant).where(
+            Restaurant.name == name,
+            Restaurant.group_id == group_id,
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
     async def get_with_dishes(self, restaurant_id: uuid.UUID) -> Restaurant | None:
         query = select(Restaurant).where(Restaurant.id == restaurant_id).options(joinedload(Restaurant.dishes))
         result = await self.session.execute(query)

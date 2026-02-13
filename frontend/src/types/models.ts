@@ -119,6 +119,7 @@ export interface OrderItem {
   detail: string | null;
   price: number;
   dish_id: string | null;
+  quantity: number;
   user_full_name?: string;
   created_at: string;
   updated_at: string;

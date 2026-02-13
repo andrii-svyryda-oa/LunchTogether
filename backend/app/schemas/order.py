@@ -53,12 +53,15 @@ class OrderItemCreate(BaseSchema):
     detail: str | None = Field(default=None, max_length=500)
     price: Decimal = Field(ge=0, decimal_places=2)
     dish_id: uuid.UUID | None = None
+    quantity: int = Field(default=1, ge=1)
+    user_id: uuid.UUID | None = None  # When set by initiator/editor on behalf of a member
 
 
 class OrderItemUpdate(BaseSchema):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     detail: str | None = Field(default=None, max_length=500)
     price: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    quantity: int | None = Field(default=None, ge=1)
 
 
 class OrderItemResponse(BaseSchema):
@@ -69,6 +72,7 @@ class OrderItemResponse(BaseSchema):
     detail: str | None
     price: Decimal
     dish_id: uuid.UUID | None
+    quantity: int = 1
     created_at: datetime
     updated_at: datetime
     user_full_name: str | None = None

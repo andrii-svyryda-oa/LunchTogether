@@ -1,8 +1,10 @@
+import logging
 import secrets
 import uuid
 
 from pydantic import BaseModel
 
+from app.core.email import EmailService
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.models.enums import GROUP_ROLE_PRESETS, GroupRole, InvitationStatus
 from app.models.user import User
@@ -14,6 +16,8 @@ from app.repositories.group import (
 )
 from app.repositories.user import UserRepository
 from app.schemas.group import InvitationAcceptResponse, InvitationCreate, InvitationResponse
+
+logger = logging.getLogger(__name__)
 
 
 class InviteInput(BaseModel):
@@ -49,12 +53,14 @@ class InviteWorkflow:
         invitation_repository: GroupInvitationRepository,
         user_repository: UserRepository,
         permission_repository: GroupMemberPermissionRepository,
+        email_service: EmailService,
     ):
         self.group_repository = group_repository
         self.group_member_repository = group_member_repository
         self.invitation_repository = invitation_repository
         self.user_repository = user_repository
         self.permission_repository = permission_repository
+        self.email_service = email_service
 
     async def create_invitation(self, input_data: InviteInput) -> InviteOutput:
         user: User = input_data.current_user  # type: ignore[assignment]
@@ -92,6 +98,17 @@ class InviteWorkflow:
                 "token": token,
             }
         )
+
+        # Send invitation email (fire-and-forget, don't block on failure)
+        try:
+            await self.email_service.send_invitation_email(
+                to_email=input_data.data.email,
+                inviter_name=user.full_name,
+                group_name=group.name,
+                token=token,
+            )
+        except Exception:
+            logger.exception("Failed to send invitation email to %s", input_data.data.email)
 
         return InviteOutput(invitation=InvitationResponse.model_validate(invitation))
 

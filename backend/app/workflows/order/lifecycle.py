@@ -98,8 +98,8 @@ class OrderLifecycleWorkflow:
         if order is None:
             raise NotFoundError(detail="Order not found")
 
-        if order.status != OrderStatus.CONFIRMED:
-            raise ValidationError(detail="Delivery fees can only be set in the Confirmed stage")
+        if order.status in (OrderStatus.FINISHED, OrderStatus.CANCELLED):
+            raise ValidationError(detail="Delivery fees cannot be changed on finished or cancelled orders")
 
         # Only initiator or editor
         membership = await self.group_member_repository.get_membership(user.id, order.group_id)
@@ -136,11 +136,11 @@ class OrderLifecycleWorkflow:
         if not items:
             return
 
-        # Group items by user and calculate totals
+        # Group items by user and calculate totals (price * quantity)
         user_totals: dict[uuid.UUID, Decimal] = {}
         for item in items:
             user_totals.setdefault(item.user_id, Decimal("0.00"))
-            user_totals[item.user_id] += item.price
+            user_totals[item.user_id] += item.price * (item.quantity or 1)
 
         # Add delivery fee per person if set
         if order.delivery_fee_per_person:
@@ -197,7 +197,7 @@ class OrderLifecycleWorkflow:
         ]
 
         participants = set(item.user_id for item in order.items)
-        total_amount = sum(item.price for item in order.items)
+        total_amount = sum(item.price * (item.quantity or 1) for item in order.items)
 
         return OrderDetailResponse(
             **{k: getattr(order, k) for k in OrderResponse.model_fields if hasattr(order, k)},

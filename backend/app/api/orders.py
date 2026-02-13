@@ -164,6 +164,7 @@ async def add_order_item(
     order_item_repository: OrderItemRepository = Depends(get_order_item_repository),
 ) -> OrderItemResponse:
     # Check permission
+    membership = None
     if not current_user.is_admin:
         membership = await group_member_repository.get_membership(current_user.id, group_id)
         if membership is None:
@@ -172,22 +173,49 @@ async def add_order_item(
     order = await order_repository.get_by_id(order_id)
     if order is None:
         raise NotFoundError(detail="Order not found")
-    if order.status != OrderStatus.INITIATED:
-        raise ForbiddenError(detail="Can only add items to orders in Initiated status")
+
+    is_initiator = order.initiator_id == current_user.id
+    is_editor = membership and membership.get_permission(PermissionType.ORDERS) == OrdersScope.EDITOR
+
+    if order.status == OrderStatus.INITIATED:
+        # Anyone in group can add their own items
+        pass
+    elif order.status == OrderStatus.CONFIRMED:
+        # Only initiator or editor can add/edit items in confirmed state
+        if not is_initiator and not is_editor and not current_user.is_admin:
+            raise ForbiddenError(detail="Only the order initiator or an editor can modify items in Confirmed status")
+    else:
+        raise ForbiddenError(detail="Can only add items to orders in Initiated or Confirmed status")
+
+    # Determine which user the item belongs to
+    target_user_id = current_user.id
+    target_user_name = current_user.full_name
+    if data.user_id is not None and data.user_id != current_user.id:
+        # Adding item on behalf of another member — requires initiator/editor
+        if not is_initiator and not is_editor and not current_user.is_admin:
+            raise ForbiddenError(detail="Only the order initiator or an editor can add items for other members")
+        target_user_id = data.user_id
+        # Look up the target user's name
+        from app.repositories.user import UserRepository
+
+        user_repo = UserRepository(order_item_repository.session)
+        target_user = await user_repo.get_by_id(data.user_id)
+        target_user_name = target_user.full_name if target_user else None
 
     item = await order_item_repository.create(
         {
             "order_id": order_id,
-            "user_id": current_user.id,
+            "user_id": target_user_id,
             "name": data.name,
             "detail": data.detail,
             "price": data.price,
             "dish_id": data.dish_id,
+            "quantity": data.quantity,
         }
     )
     return OrderItemResponse(
         **{k: getattr(item, k) for k in OrderItemResponse.model_fields if hasattr(item, k)},
-        user_full_name=current_user.full_name,
+        user_full_name=target_user_name,
     )
 
 
@@ -205,20 +233,34 @@ async def update_order_item(
     order = await order_repository.get_by_id(order_id)
     if order is None:
         raise NotFoundError(detail="Order not found")
-    if order.status != OrderStatus.INITIATED:
-        raise ForbiddenError(detail="Can only edit items in orders in Initiated status")
+
+    membership = None
+    if not current_user.is_admin:
+        membership = await group_member_repository.get_membership(current_user.id, group_id)
+        if membership is None:
+            raise ForbiddenError(detail="You are not a member of this group")
+
+    is_initiator = order.initiator_id == current_user.id
+    is_editor = membership and membership.get_permission(PermissionType.ORDERS) == OrdersScope.EDITOR
+
+    if order.status == OrderStatus.INITIATED:
+        # In initiated: editor can edit any, others only own
+        pass
+    elif order.status == OrderStatus.CONFIRMED:
+        # In confirmed: only initiator or editor can edit any item
+        if not is_initiator and not is_editor and not current_user.is_admin:
+            raise ForbiddenError(detail="Only the order initiator or an editor can modify items in Confirmed status")
+    else:
+        raise ForbiddenError(detail="Can only edit items in orders in Initiated or Confirmed status")
 
     item = await order_item_repository.get_by_id(item_id)
     if item is None or item.order_id != order_id:
         raise NotFoundError(detail="Order item not found")
 
-    # Permission check: Editor can edit any, others can only edit own
-    if not current_user.is_admin:
-        membership = await group_member_repository.get_membership(current_user.id, group_id)
-        if membership is None:
-            raise ForbiddenError(detail="You are not a member of this group")
-        if membership.get_permission(PermissionType.ORDERS) != OrdersScope.EDITOR and item.user_id != current_user.id:
-            raise ForbiddenError(detail="You can only edit your own items")
+    # In initiated status, non-editor can only edit own items
+    is_own_item = item.user_id == current_user.id
+    if order.status == OrderStatus.INITIATED and not current_user.is_admin and not is_editor and not is_own_item:
+        raise ForbiddenError(detail="You can only edit your own items")
 
     update_data = data.model_dump(exclude_unset=True)
     if not update_data:
@@ -244,20 +286,32 @@ async def delete_order_item(
     order = await order_repository.get_by_id(order_id)
     if order is None:
         raise NotFoundError(detail="Order not found")
-    if order.status != OrderStatus.INITIATED:
-        raise ForbiddenError(detail="Can only remove items from orders in Initiated status")
+
+    membership = None
+    if not current_user.is_admin:
+        membership = await group_member_repository.get_membership(current_user.id, group_id)
+        if membership is None:
+            raise ForbiddenError(detail="You are not a member of this group")
+
+    is_initiator = order.initiator_id == current_user.id
+    is_editor = membership and membership.get_permission(PermissionType.ORDERS) == OrdersScope.EDITOR
+
+    if order.status == OrderStatus.INITIATED:
+        pass
+    elif order.status == OrderStatus.CONFIRMED:
+        if not is_initiator and not is_editor and not current_user.is_admin:
+            raise ForbiddenError(detail="Only the order initiator or an editor can remove items in Confirmed status")
+    else:
+        raise ForbiddenError(detail="Can only remove items from orders in Initiated or Confirmed status")
 
     item = await order_item_repository.get_by_id(item_id)
     if item is None or item.order_id != order_id:
         raise NotFoundError(detail="Order item not found")
 
-    # Permission check
-    if not current_user.is_admin:
-        membership = await group_member_repository.get_membership(current_user.id, group_id)
-        if membership is None:
-            raise ForbiddenError(detail="You are not a member of this group")
-        if membership.get_permission(PermissionType.ORDERS) != OrdersScope.EDITOR and item.user_id != current_user.id:
-            raise ForbiddenError(detail="You can only remove your own items")
+    # In initiated status, non-editor can only delete own items
+    is_own_item = item.user_id == current_user.id
+    if order.status == OrderStatus.INITIATED and not current_user.is_admin and not is_editor and not is_own_item:
+        raise ForbiddenError(detail="You can only remove your own items")
 
     await order_item_repository.delete(item_id)
     return MessageResponse(message="Order item removed successfully")

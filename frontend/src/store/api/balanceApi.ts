@@ -36,7 +36,10 @@ export const balanceApi = baseApi.injectEndpoints({
         method: "POST",
         body: data,
       }),
-      invalidatesTags: [{ type: "Balance" as const, id: "LIST" }],
+      invalidatesTags: (_result, _error, { data }) => [
+        { type: "Balance" as const, id: "LIST" },
+        { type: "Balance" as const, id: `HISTORY_${data.user_id}` },
+      ],
     }),
 
     getBalanceHistory: builder.query<
@@ -45,6 +48,9 @@ export const balanceApi = baseApi.injectEndpoints({
     >({
       query: ({ groupId, userId }) =>
         API_ENDPOINTS.BALANCES.HISTORY(groupId, userId),
+      providesTags: (_result, _error, { userId }) => [
+        { type: "Balance" as const, id: `HISTORY_${userId}` },
+      ],
     }),
   }),
 });

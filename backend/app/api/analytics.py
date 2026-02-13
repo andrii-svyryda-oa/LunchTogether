@@ -66,15 +66,23 @@ async def get_group_analytics(
     members_query = select(func.count()).select_from(GroupMember).where(GroupMember.group_id == group_id)
     total_members = (await session.execute(members_query)).scalar_one()
 
-    # Total spent (sum of all order items in finished orders)
-    spent_query = (
+    # Total spent (sum of all order items + delivery fees in finished orders)
+    items_spent_query = (
         select(func.coalesce(func.sum(OrderItem.price), 0))
         .join(Order, OrderItem.order_id == Order.id)
         .where(Order.group_id == group_id, Order.status == OrderStatus.FINISHED)
     )
-    total_spent = (await session.execute(spent_query)).scalar_one()
+    items_spent = (await session.execute(items_spent_query)).scalar_one()
 
-    avg_value = Decimal(str(total_spent)) / Decimal(str(completed_orders)) if completed_orders > 0 else Decimal("0.00")
+    delivery_spent_query = (
+        select(func.coalesce(func.sum(Order.delivery_fee_total), 0))
+        .where(Order.group_id == group_id, Order.status == OrderStatus.FINISHED)
+    )
+    delivery_spent = (await session.execute(delivery_spent_query)).scalar_one()
+
+    total_spent = Decimal(str(items_spent)) + Decimal(str(delivery_spent))
+
+    avg_value = total_spent / Decimal(str(completed_orders)) if completed_orders > 0 else Decimal("0.00")
 
     # Most popular restaurant
     restaurant_query = (
@@ -93,7 +101,7 @@ async def get_group_analytics(
         cancelled_orders=cancelled_orders,
         active_orders=active_orders,
         total_members=total_members,
-        total_spent=Decimal(str(total_spent)),
+        total_spent=total_spent.quantize(Decimal("0.01")),
         average_order_value=avg_value.quantize(Decimal("0.01")),
         most_popular_restaurant=most_popular,
     )
@@ -112,15 +120,29 @@ async def get_user_analytics(
     orders_query = select(func.count(func.distinct(OrderItem.order_id))).where(OrderItem.user_id == current_user.id)
     total_orders = (await session.execute(orders_query)).scalar_one()
 
-    # Total spent
-    spent_query = (
+    # Total spent (items + delivery fee per person)
+    items_spent_query = (
         select(func.coalesce(func.sum(OrderItem.price), 0))
         .join(Order, OrderItem.order_id == Order.id)
         .where(OrderItem.user_id == current_user.id, Order.status == OrderStatus.FINISHED)
     )
-    total_spent = (await session.execute(spent_query)).scalar_one()
+    items_spent = (await session.execute(items_spent_query)).scalar_one()
 
-    avg_value = Decimal(str(total_spent)) / Decimal(str(total_orders)) if total_orders > 0 else Decimal("0.00")
+    # Sum delivery_fee_per_person for each finished order the user participated in
+    user_orders_subquery = (
+        select(func.distinct(OrderItem.order_id))
+        .where(OrderItem.user_id == current_user.id)
+        .scalar_subquery()
+    )
+    delivery_spent_query = (
+        select(func.coalesce(func.sum(Order.delivery_fee_per_person), 0))
+        .where(Order.id.in_(user_orders_subquery), Order.status == OrderStatus.FINISHED)
+    )
+    delivery_spent = (await session.execute(delivery_spent_query)).scalar_one()
+
+    total_spent = Decimal(str(items_spent)) + Decimal(str(delivery_spent))
+
+    avg_value = total_spent / Decimal(str(total_orders)) if total_orders > 0 else Decimal("0.00")
 
     # Favorite restaurant
     fav_query = (
@@ -141,7 +163,7 @@ async def get_user_analytics(
     return UserAnalytics(
         total_groups=total_groups,
         total_orders_participated=total_orders,
-        total_spent=Decimal(str(total_spent)),
+        total_spent=total_spent.quantize(Decimal("0.01")),
         average_order_value=avg_value.quantize(Decimal("0.01")),
         favorite_restaurant=fav_restaurant,
         total_balance_across_groups=Decimal(str(total_balance)),

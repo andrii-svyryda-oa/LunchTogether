@@ -1,8 +1,10 @@
 import uuid
+from typing import Annotated
 
 from fastapi import Cookie, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.email import EmailService
 from app.core.exceptions import AuthError, ForbiddenError
 from app.core.security import decode_access_token
 from app.database import get_db
@@ -77,6 +79,13 @@ def get_balance_history_repository(session: AsyncSession = Depends(get_db)) -> B
     return BalanceHistoryRepository(session)
 
 
+# --- Service factories ---
+
+
+def get_email_service() -> EmailService:
+    return EmailService()
+
+
 # --- Workflow factories ---
 
 
@@ -115,9 +124,15 @@ def get_invite_workflow(
     invitation_repository: GroupInvitationRepository = Depends(get_group_invitation_repository),
     user_repository: UserRepository = Depends(get_user_repository),
     permission_repository: GroupMemberPermissionRepository = Depends(get_group_member_permission_repository),
+    email_service: EmailService = Depends(get_email_service),
 ) -> InviteWorkflow:
     return InviteWorkflow(
-        group_repository, group_member_repository, invitation_repository, user_repository, permission_repository
+        group_repository,
+        group_member_repository,
+        invitation_repository,
+        user_repository,
+        permission_repository,
+        email_service,
     )
 
 
@@ -128,6 +143,9 @@ def get_create_order_workflow(
     restaurant_repository: RestaurantRepository = Depends(get_restaurant_repository),
 ) -> CreateOrderWorkflow:
     return CreateOrderWorkflow(group_repository, group_member_repository, order_repository, restaurant_repository)
+
+
+CreateOrderWorkflowDep = Annotated[CreateOrderWorkflow, Depends(get_create_order_workflow)]
 
 
 def get_order_lifecycle_workflow(

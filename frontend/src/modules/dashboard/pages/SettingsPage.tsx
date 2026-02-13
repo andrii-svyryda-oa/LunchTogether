@@ -97,7 +97,7 @@ export function SettingsPage() {
                 aria-checked={navigateToActive}
                 onClick={() => setNavigateToActive(!navigateToActive)}
                 className={cn(
-                  "relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ml-4",
+                  "relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 shrink-0 ml-4 cursor-pointer hover:shadow-sm hover:scale-105",
                   navigateToActive ? "bg-primary" : "bg-muted"
                 )}
               >

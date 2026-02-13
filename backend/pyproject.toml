@@ -16,6 +16,7 @@ dependencies = [
     "python-multipart",
     "sentry-sdk[fastapi]",
     "aiofiles",
+    "aiosmtplib",
     "email-validator",
 ]
 

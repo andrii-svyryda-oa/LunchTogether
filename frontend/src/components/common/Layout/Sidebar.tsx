@@ -125,6 +125,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <NavLink
               key={group.id}
               to={`/groups/${group.id}`}
+              state={{ autoNavigate: true }}
               onClick={onClose}
               title={group.name}
               className={() =>
@@ -144,7 +145,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <button
-                className="h-11 w-11 rounded-2xl flex items-center justify-center text-sm transition-all duration-200 hover:rounded-xl bg-sidebar-accent text-sidebar-foreground hover:bg-primary/15 hover:text-primary"
+                className="h-11 w-11 rounded-2xl flex items-center justify-center text-sm transition-all duration-200 hover:rounded-xl bg-sidebar-accent text-sidebar-foreground hover:bg-primary/15 hover:text-primary cursor-pointer hover:scale-105"
                 title="Create Group"
               >
                 <Plus className="h-5 w-5" />

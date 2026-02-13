@@ -119,7 +119,7 @@ export function RestaurantListPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {restaurants?.map((r) => (
             <Card key={r.id} className="p-5 hover:shadow-md group">
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center justify-between gap-2">
                 <Link
                   to={`/groups/${groupId}/restaurants/${r.id}`}
                   className="flex items-center gap-3 flex-1 min-w-0"
@@ -138,7 +138,7 @@ export function RestaurantListPage() {
                     )}
                   </div>
                 </Link>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center justify-end gap-1 shrink-0">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -148,7 +148,7 @@ export function RestaurantListPage() {
                     <Trash2 className="h-4 w-4" />
                   </Button>
                   <Link to={`/groups/${groupId}/restaurants/${r.id}`}>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground opacity-100" />
                   </Link>
                 </div>
               </div>

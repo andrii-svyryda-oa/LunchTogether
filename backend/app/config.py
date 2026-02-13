@@ -17,11 +17,23 @@ class Settings(BaseSettings):
     # JWT
     jwt_secret_key: str = "your-secret-key-here"
     jwt_algorithm: str = "HS256"
-    jwt_access_token_expire_minutes: int = 30
+    jwt_access_token_expire_minutes: int = 6000
 
     # File Storage
     upload_dir: str = "/var/www/lunchtogether/uploads"
     max_upload_size: int = 10485760  # 10MB
+
+    # Email (SMTP)
+    smtp_host: str = "localhost"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "noreply@lunchtogether.app"
+    smtp_from_name: str = "LunchTogether"
+    smtp_use_tls: bool = True
+
+    # Frontend URL (used in email links)
+    frontend_url: str = "http://localhost:5173"
 
     # Sentry
     sentry_dsn: str = ""
