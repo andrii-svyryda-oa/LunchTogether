@@ -18,20 +18,6 @@ import {
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
-const GROUP_GRADIENTS = [
-  "from-orange-500 to-amber-500",
-  "from-blue-500 to-indigo-500",
-  "from-emerald-500 to-teal-500",
-  "from-purple-500 to-violet-500",
-  "from-pink-500 to-rose-500",
-  "from-cyan-500 to-sky-500",
-];
-
-function getGroupGradient(name: string): string {
-  const index = name.charCodeAt(0) % GROUP_GRADIENTS.length;
-  return GROUP_GRADIENTS[index];
-}
-
 export function GroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const { user } = useAuth();
@@ -55,15 +41,10 @@ export function GroupDetailPage() {
   const isOwner = group.owner_id === user?.id;
 
   return (
-    <div className="animate-slide-up">
+    <div>
       {/* Group header */}
       <div className="flex items-center gap-4 mb-8">
-        <div
-          className={cn(
-            "flex h-14 w-14 items-center justify-center rounded-2xl bg-linear-to-br text-white font-bold text-2xl shadow-lg shrink-0",
-            getGroupGradient(group.name),
-          )}
-        >
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground font-bold text-2xl shadow-lg shrink-0">
           {group.name.charAt(0).toUpperCase()}
         </div>
         <div>
@@ -105,7 +86,7 @@ export function GroupDetailPage() {
       {/* Active order banner */}
       {activeOrder && (
         <Link to={`/groups/${groupId}/orders/${activeOrder.id}`}>
-          <Card className="p-5 mb-8 border-orange-300 bg-linear-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/20 hover:shadow-md transition-all group">
+          <Card className="p-5 mb-8 border-orange-300 bg-orange-50 dark:bg-orange-950/20 hover:shadow-md transition-all group">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 dark:bg-orange-900/40">
@@ -203,7 +184,7 @@ export function GroupDetailPage() {
                   "flex h-10 w-10 items-center justify-center rounded-xl",
                   Number(myBalance.amount) >= 0
                     ? "bg-emerald-50 text-emerald-600"
-                    : "bg-red-50 text-red-600",
+                    : "bg-red-50 text-red-600"
                 )}
               >
                 <Wallet className="h-5 w-5" />
@@ -217,7 +198,7 @@ export function GroupDetailPage() {
                     "text-2xl font-bold",
                     Number(myBalance.amount) >= 0
                       ? "text-emerald-600"
-                      : "text-red-600",
+                      : "text-red-600"
                   )}
                 >
                   {Number(myBalance.amount).toFixed(2)} ₴

@@ -1,9 +1,9 @@
+import { useAuth } from "@/hooks";
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
+import { Footer } from "./Footer";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
-import { Footer } from "./Footer";
-import { useAuth } from "@/hooks";
 
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -15,16 +15,11 @@ export function Layout() {
 
       <div className="flex flex-1">
         {isAuthenticated && (
-          <Sidebar
-            isOpen={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-          />
+          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         )}
 
-        <main
-          className={`flex-1 ${isAuthenticated ? "md:ml-64" : ""}`}
-        >
-          <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 max-w-7xl animate-fade-in">
+        <main className={`flex-1 ${isAuthenticated ? "md:ml-64" : ""}`}>
+          <div className="px-4 py-6 sm:px-6 lg:px-8">
             <Outlet />
           </div>
         </main>

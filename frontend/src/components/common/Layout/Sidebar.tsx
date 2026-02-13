@@ -35,26 +35,12 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-const GROUP_GRADIENTS = [
-  "from-orange-500 to-amber-500",
-  "from-blue-500 to-indigo-500",
-  "from-emerald-500 to-teal-500",
-  "from-purple-500 to-violet-500",
-  "from-pink-500 to-rose-500",
-  "from-cyan-500 to-sky-500",
-];
-
-function getGroupGradient(name: string): string {
-  const index = name.charCodeAt(0) % GROUP_GRADIENTS.length;
-  return GROUP_GRADIENTS[index];
-}
-
 // Pages that belong to the "home" context
 const HOME_PATHS = ["/", "/profile", "/settings", "/users"];
 
 function isHomeContext(pathname: string): boolean {
   return HOME_PATHS.some(
-    (p) => pathname === p || (p !== "/" && pathname.startsWith(p + "/")),
+    (p) => pathname === p || (p !== "/" && pathname.startsWith(p + "/"))
   );
 }
 
@@ -111,7 +97,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         className={cn(
           "fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] w-64 border-r border-sidebar-border bg-sidebar-background transition-transform duration-300 ease-in-out flex",
           "md:translate-x-0",
-          isOpen ? "translate-x-0" : "-translate-x-full",
+          isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Discord-like icon bar */}
@@ -125,7 +111,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 "h-11 w-11 rounded-2xl flex items-center justify-center transition-all duration-200 hover:rounded-xl group",
                 inHomeContext
                   ? "bg-primary text-primary-foreground rounded-xl shadow-lg shadow-primary/30"
-                  : "bg-sidebar-accent text-sidebar-foreground hover:bg-primary/20 hover:text-primary",
+                  : "bg-sidebar-accent text-sidebar-foreground hover:bg-primary/20 hover:text-primary"
               )
             }
           >
@@ -145,10 +131,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 cn(
                   "h-11 w-11 rounded-2xl flex items-center justify-center text-sm font-bold transition-all duration-200 hover:rounded-xl",
                   activeGroupId === group.id
-                    ? `bg-linear-to-br ${getGroupGradient(
-                        group.name,
-                      )} text-white rounded-xl shadow-lg`
-                    : "bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-border",
+                    ? "bg-primary text-primary-foreground rounded-xl shadow-lg shadow-primary/30"
+                    : "bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-border"
                 )
               }
             >
@@ -160,7 +144,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <button
-                className="h-11 w-11 rounded-2xl flex items-center justify-center text-sm transition-all duration-200 hover:rounded-xl bg-sidebar-accent text-sidebar-foreground hover:bg-emerald-100 hover:text-emerald-600 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-400"
+                className="h-11 w-11 rounded-2xl flex items-center justify-center text-sm transition-all duration-200 hover:rounded-xl bg-sidebar-accent text-sidebar-foreground hover:bg-primary/15 hover:text-primary"
                 title="Create Group"
               >
                 <Plus className="h-5 w-5" />
@@ -220,7 +204,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                       isActive
                         ? "bg-sidebar-accent text-sidebar-primary"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     )
                   }
                 >
@@ -236,7 +220,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                       isActive
                         ? "bg-sidebar-accent text-sidebar-primary"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     )
                   }
                 >
@@ -252,7 +236,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                       isActive
                         ? "bg-sidebar-accent text-sidebar-primary"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     )
                   }
                 >
@@ -274,7 +258,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                         "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                         isActive
                           ? "bg-sidebar-accent text-sidebar-primary"
-                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       )
                     }
                   >
@@ -300,7 +284,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                     isActive
                       ? "bg-sidebar-accent text-sidebar-primary"
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )
                 }
               >
@@ -316,7 +300,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                     isActive
                       ? "bg-sidebar-accent text-sidebar-primary"
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )
                 }
               >
@@ -332,7 +316,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                     isActive
                       ? "bg-sidebar-accent text-sidebar-primary"
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )
                 }
               >
@@ -348,7 +332,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                     isActive
                       ? "bg-sidebar-accent text-sidebar-primary"
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )
                 }
               >
@@ -364,7 +348,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                     isActive
                       ? "bg-sidebar-accent text-sidebar-primary"
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )
                 }
               >

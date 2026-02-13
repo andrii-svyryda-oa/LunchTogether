@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     sentry_dsn: str = ""
 
     # CORS
-    cors_origins: list[str] = ["http://localhost:5173"]
+    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:5174"]
 
     @property
     def is_development(self) -> bool:

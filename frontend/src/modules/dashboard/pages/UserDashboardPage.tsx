@@ -15,20 +15,6 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const GROUP_GRADIENTS = [
-  "from-orange-500 to-amber-500",
-  "from-blue-500 to-indigo-500",
-  "from-emerald-500 to-teal-500",
-  "from-purple-500 to-violet-500",
-  "from-pink-500 to-rose-500",
-  "from-cyan-500 to-sky-500",
-];
-
-function getGroupGradient(name: string): string {
-  const index = name.charCodeAt(0) % GROUP_GRADIENTS.length;
-  return GROUP_GRADIENTS[index];
-}
-
 export function UserDashboardPage() {
   const { user } = useAuth();
   const { data: analytics, isLoading } = useGetUserAnalyticsQuery();
@@ -43,13 +29,13 @@ export function UserDashboardPage() {
   }
 
   return (
-    <div className="animate-slide-up">
+    <div>
       {/* Welcome header */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
             Welcome back,{" "}
-            <span className="bg-linear-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">
+            <span className="text-primary">
               {user?.full_name?.split(" ")[0]}
             </span>
             !
@@ -144,7 +130,7 @@ export function UserDashboardPage() {
                   "flex h-10 w-10 items-center justify-center rounded-xl group-hover:scale-105 transition-transform",
                   Number(analytics.total_balance_across_groups) >= 0
                     ? "bg-emerald-50 text-emerald-600"
-                    : "bg-red-50 text-red-600",
+                    : "bg-red-50 text-red-600"
                 )}
               >
                 <DollarSign className="h-5 w-5" />
@@ -158,7 +144,7 @@ export function UserDashboardPage() {
                 "text-3xl font-bold",
                 Number(analytics.total_balance_across_groups) >= 0
                   ? "text-emerald-600"
-                  : "text-red-600",
+                  : "text-red-600"
               )}
             >
               {Number(analytics.total_balance_across_groups).toFixed(2)} ₴
@@ -207,12 +193,7 @@ export function UserDashboardPage() {
             <Link key={group.id} to={`/groups/${group.id}`}>
               <Card className="p-4 hover:shadow-md hover:border-primary/30 cursor-pointer group">
                 <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      "flex h-11 w-11 items-center justify-center rounded-xl bg-linear-to-br text-white font-bold text-sm shrink-0 group-hover:scale-105 transition-transform shadow-sm",
-                      getGroupGradient(group.name),
-                    )}
-                  >
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-sm shrink-0 group-hover:scale-105 transition-transform shadow-sm">
                     {group.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">

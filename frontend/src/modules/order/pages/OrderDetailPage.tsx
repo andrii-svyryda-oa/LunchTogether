@@ -57,20 +57,6 @@ const NEXT_STATUS: Record<string, { label: string; status: string }> = {
   ordered: { label: "Mark as Finished", status: "finished" },
 };
 
-const AVATAR_GRADIENTS = [
-  "from-orange-500 to-amber-500",
-  "from-blue-500 to-indigo-500",
-  "from-emerald-500 to-teal-500",
-  "from-purple-500 to-violet-500",
-  "from-pink-500 to-rose-500",
-  "from-cyan-500 to-sky-500",
-];
-
-function getAvatarGradient(name: string): string {
-  const index = (name ?? "?").charCodeAt(0) % AVATAR_GRADIENTS.length;
-  return AVATAR_GRADIENTS[index];
-}
-
 export function OrderDetailPage() {
   const { groupId, orderId } = useParams<{
     groupId: string;
@@ -175,7 +161,7 @@ export function OrderDetailPage() {
   }, {} as Record<string, typeof order.items>);
 
   return (
-    <div className="animate-slide-up">
+    <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -187,7 +173,7 @@ export function OrderDetailPage() {
               className={cn(
                 "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium",
                 style.bg,
-                style.text,
+                style.text
               )}
             >
               <span className={cn("h-1.5 w-1.5 rounded-full", style.dot)} />
@@ -371,12 +357,7 @@ export function OrderDetailPage() {
           {Object.entries(itemsByUser).map(([userName, items]) => (
             <div key={userName}>
               <div className="flex items-center gap-2 mb-3">
-                <div
-                  className={cn(
-                    "flex h-7 w-7 items-center justify-center rounded-full bg-linear-to-br text-white text-[11px] font-bold shrink-0",
-                    getAvatarGradient(userName),
-                  )}
-                >
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold shrink-0">
                   {userName.charAt(0).toUpperCase()}
                 </div>
                 <h3 className="font-medium text-sm">{userName}</h3>

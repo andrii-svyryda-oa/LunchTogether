@@ -1,9 +1,8 @@
-import { Link, useNavigate } from "react-router-dom";
-import { LogOut, Menu, UtensilsCrossed } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { APP, ROUTES } from "@/constants";
 import { useAuth } from "@/hooks";
-import { ROUTES } from "@/constants";
-import { APP } from "@/constants";
+import { LogOut, Menu, UtensilsCrossed } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 
 interface HeaderProps {
   onToggleSidebar?: () => void;
@@ -35,7 +34,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         </Button>
 
         <Link to={ROUTES.HOME} className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-orange-500 to-amber-500 shadow-md shadow-orange-500/20">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary shadow-md shadow-primary/20">
             <UtensilsCrossed className="h-4.5 w-4.5 text-white" />
           </div>
           <span className="font-bold text-lg tracking-tight">{APP.NAME}</span>
@@ -48,7 +47,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             <>
               <Button variant="ghost" size="sm" asChild className="gap-2">
                 <Link to={ROUTES.PROFILE}>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-linear-to-br from-orange-500 to-amber-500 text-[11px] font-bold text-white">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
                     {user.full_name?.charAt(0).toUpperCase()}
                   </div>
                   <span className="hidden sm:inline">{user.full_name}</span>
@@ -68,7 +67,11 @@ export function Header({ onToggleSidebar }: HeaderProps) {
               <Button variant="ghost" size="sm" asChild>
                 <Link to={ROUTES.LOGIN}>Sign in</Link>
               </Button>
-              <Button size="sm" asChild className="rounded-lg shadow-md shadow-primary/20">
+              <Button
+                size="sm"
+                asChild
+                className="rounded-lg shadow-md shadow-primary/20"
+              >
                 <Link to={ROUTES.REGISTER}>Get Started</Link>
               </Button>
             </>

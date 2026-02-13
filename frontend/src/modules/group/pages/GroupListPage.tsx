@@ -15,24 +15,9 @@ import {
   useCreateGroupMutation,
   useGetGroupsQuery,
 } from "@/store/api/groupApi";
-import { cn } from "@/utils";
 import { ArrowRight, Plus, Users } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-
-const GROUP_GRADIENTS = [
-  "from-orange-500 to-amber-500",
-  "from-blue-500 to-indigo-500",
-  "from-emerald-500 to-teal-500",
-  "from-purple-500 to-violet-500",
-  "from-pink-500 to-rose-500",
-  "from-cyan-500 to-sky-500",
-];
-
-function getGroupGradient(name: string): string {
-  const index = name.charCodeAt(0) % GROUP_GRADIENTS.length;
-  return GROUP_GRADIENTS[index];
-}
 
 export function GroupListPage() {
   const { data: groups, isLoading, error } = useGetGroupsQuery();
@@ -69,7 +54,7 @@ export function GroupListPage() {
   }
 
   return (
-    <div className="animate-slide-up">
+    <div>
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">My Groups</h1>
@@ -124,7 +109,9 @@ export function GroupListPage() {
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted mb-4">
             <Users className="h-7 w-7 text-muted-foreground" />
           </div>
-          <p className="text-muted-foreground font-medium mb-1">No groups yet</p>
+          <p className="text-muted-foreground font-medium mb-1">
+            No groups yet
+          </p>
           <p className="text-sm text-muted-foreground">
             Create one to get started ordering lunch together!
           </p>
@@ -135,12 +122,7 @@ export function GroupListPage() {
             <Link key={group.id} to={`/groups/${group.id}`}>
               <Card className="p-5 hover:shadow-md hover:border-primary/30 cursor-pointer group">
                 <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      "flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br text-white font-bold text-lg shrink-0 group-hover:scale-105 transition-transform shadow-sm",
-                      getGroupGradient(group.name),
-                    )}
-                  >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-lg shrink-0 group-hover:scale-105 transition-transform shadow-sm">
                     {group.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">

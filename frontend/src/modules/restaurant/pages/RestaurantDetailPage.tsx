@@ -78,7 +78,7 @@ export function RestaurantDetailPage() {
   }
 
   return (
-    <div className="animate-slide-up">
+    <div>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 shadow-sm shrink-0">

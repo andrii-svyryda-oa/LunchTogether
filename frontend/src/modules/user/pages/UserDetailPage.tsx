@@ -1,10 +1,10 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, ArrowLeft } from "lucide-react";
-import { useGetUserQuery } from "@/store/api/userApi";
-import { UserProfile } from "../components/UserProfile";
+import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/constants";
+import { useGetUserQuery } from "@/store/api/userApi";
+import { AlertCircle, ArrowLeft } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { UserProfile } from "../components/UserProfile";
 
 export function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +21,7 @@ export function UserDetailPage() {
 
   if (error || !user) {
     return (
-      <div className="space-y-4 animate-slide-up">
+      <div className="space-y-4">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
@@ -37,7 +37,7 @@ export function UserDetailPage() {
   }
 
   return (
-    <div className="space-y-6 animate-slide-up">
+    <div className="space-y-6">
       <Button
         variant="ghost"
         onClick={() => navigate(ROUTES.USERS)}

@@ -83,7 +83,7 @@ export function OrderListPage() {
   }
 
   return (
-    <div className="animate-slide-up">
+    <div>
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
@@ -178,7 +178,7 @@ export function OrderListPage() {
                         className={cn(
                           "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium",
                           style.bg,
-                          style.text,
+                          style.text
                         )}
                       >
                         <span

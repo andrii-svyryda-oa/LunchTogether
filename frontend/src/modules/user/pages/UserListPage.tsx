@@ -17,7 +17,6 @@ import {
   setCurrentPage,
   setSearchQuery,
 } from "@/store/slices/userSlice";
-import { cn } from "@/utils";
 import { formatDate } from "@/utils";
 import {
   AlertCircle,
@@ -27,20 +26,6 @@ import {
   User,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-
-const AVATAR_GRADIENTS = [
-  "from-orange-500 to-amber-500",
-  "from-blue-500 to-indigo-500",
-  "from-emerald-500 to-teal-500",
-  "from-purple-500 to-violet-500",
-  "from-pink-500 to-rose-500",
-  "from-cyan-500 to-sky-500",
-];
-
-function getAvatarGradient(name: string): string {
-  const index = (name ?? "?").charCodeAt(0) % AVATAR_GRADIENTS.length;
-  return AVATAR_GRADIENTS[index];
-}
 
 export function UserListPage() {
   const dispatch = useAppDispatch();
@@ -57,7 +42,7 @@ export function UserListPage() {
   const totalPages = data?.total_pages ?? 0;
 
   return (
-    <div className="space-y-6 animate-slide-up">
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Users</h1>
         <p className="text-muted-foreground mt-1">
@@ -97,12 +82,7 @@ export function UserListPage() {
               <Link key={user.id} to={`/users/${user.id}`}>
                 <Card className="hover:shadow-md hover:border-primary/30 cursor-pointer group">
                   <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                    <div
-                      className={cn(
-                        "flex h-11 w-11 items-center justify-center rounded-full bg-linear-to-br text-white font-bold text-sm shrink-0 group-hover:scale-105 transition-transform",
-                        getAvatarGradient(user.full_name),
-                      )}
-                    >
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-sm shrink-0 group-hover:scale-105 transition-transform">
                       {user.full_name.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">

@@ -16,7 +16,7 @@ export function SettingsPage() {
   const [fullName, setFullName] = useState(user?.full_name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [navigateToActive, setNavigateToActive] = useState(
-    user?.navigate_to_active_order ?? false,
+    user?.navigate_to_active_order ?? false
   );
 
   const handleSave = async () => {
@@ -40,7 +40,7 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="animate-slide-up">
+    <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground mt-1">
@@ -98,13 +98,13 @@ export function SettingsPage() {
                 onClick={() => setNavigateToActive(!navigateToActive)}
                 className={cn(
                   "relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ml-4",
-                  navigateToActive ? "bg-primary" : "bg-muted",
+                  navigateToActive ? "bg-primary" : "bg-muted"
                 )}
               >
                 <span
                   className={cn(
                     "inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform",
-                    navigateToActive ? "translate-x-6" : "translate-x-1",
+                    navigateToActive ? "translate-x-6" : "translate-x-1"
                   )}
                 />
               </button>
@@ -129,7 +129,7 @@ export function SettingsPage() {
                     "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium",
                     user?.role === "admin"
                       ? "bg-purple-50 text-purple-700"
-                      : "bg-blue-50 text-blue-700",
+                      : "bg-blue-50 text-blue-700"
                   )}
                 >
                   {user?.role === "admin" ? "Admin" : "User"}
@@ -144,13 +144,13 @@ export function SettingsPage() {
                     "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium",
                     user?.is_active
                       ? "bg-emerald-50 text-emerald-700"
-                      : "bg-red-50 text-red-700",
+                      : "bg-red-50 text-red-700"
                   )}
                 >
                   <span
                     className={cn(
                       "h-1.5 w-1.5 rounded-full",
-                      user?.is_active ? "bg-emerald-500" : "bg-red-500",
+                      user?.is_active ? "bg-emerald-500" : "bg-red-500"
                     )}
                   />
                   {user?.is_active ? "Active" : "Inactive"}

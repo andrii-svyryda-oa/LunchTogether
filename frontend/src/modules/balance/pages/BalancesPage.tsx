@@ -21,20 +21,6 @@ import { ChevronUp, History, Plus, Wallet } from "lucide-react";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 
-const AVATAR_GRADIENTS = [
-  "from-orange-500 to-amber-500",
-  "from-blue-500 to-indigo-500",
-  "from-emerald-500 to-teal-500",
-  "from-purple-500 to-violet-500",
-  "from-pink-500 to-rose-500",
-  "from-cyan-500 to-sky-500",
-];
-
-function getAvatarGradient(name: string): string {
-  const index = (name ?? "?").charCodeAt(0) % AVATAR_GRADIENTS.length;
-  return AVATAR_GRADIENTS[index];
-}
-
 export function BalancesPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const { user } = useAuth();
@@ -51,7 +37,7 @@ export function BalancesPage() {
   const [historyUserId, setHistoryUserId] = useState<string | null>(null);
   const { data: history } = useGetBalanceHistoryQuery(
     { groupId: groupId!, userId: historyUserId! },
-    { skip: !historyUserId },
+    { skip: !historyUserId }
   );
 
   const handleAdjust = async () => {
@@ -82,7 +68,7 @@ export function BalancesPage() {
   }
 
   return (
-    <div className="animate-slide-up">
+    <div>
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Balances</h1>
@@ -165,12 +151,7 @@ export function BalancesPage() {
                 <div className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div
-                        className={cn(
-                          "flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br text-white text-sm font-bold shrink-0",
-                          getAvatarGradient(balance.user_full_name ?? "?"),
-                        )}
-                      >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold shrink-0">
                         {(balance.user_full_name ?? "?")
                           .charAt(0)
                           .toUpperCase()}
@@ -190,7 +171,7 @@ export function BalancesPage() {
                           "text-lg font-bold",
                           Number(balance.amount) >= 0
                             ? "text-emerald-600"
-                            : "text-red-600",
+                            : "text-red-600"
                         )}
                       >
                         {Number(balance.amount).toFixed(2)} ₴
@@ -236,7 +217,7 @@ export function BalancesPage() {
                                   "text-[11px] font-medium px-2 py-0.5 rounded-full",
                                   entry.change_type === "order"
                                     ? "bg-blue-50 text-blue-600"
-                                    : "bg-amber-50 text-amber-600",
+                                    : "bg-amber-50 text-amber-600"
                                 )}
                               >
                                 {entry.change_type === "order"
@@ -260,7 +241,7 @@ export function BalancesPage() {
                                   "font-medium",
                                   Number(entry.amount) >= 0
                                     ? "text-emerald-600"
-                                    : "text-red-600",
+                                    : "text-red-600"
                                 )}
                               >
                                 {Number(entry.amount) >= 0 ? "+" : ""}
