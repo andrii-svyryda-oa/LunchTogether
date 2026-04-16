@@ -27,3 +27,11 @@ Thumbs.db
 
 # Uploads
 uploads/
+
+# SSH / deploy keys (never commit private keys)
+gh_actions_*
+!gh_actions_*.pub
+id_rsa
+id_ed25519
+*.pem
+*.ppk

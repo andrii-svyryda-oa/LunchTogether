@@ -15,15 +15,38 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+          # Trim whitespace/newlines the secret picker might have let through.
+          SERVER_HOST="$(printf '%s' "$SERVER_HOST" | tr -d '[:space:]')"
+          if [ -z "$SERVER_HOST" ]; then
+            echo "ERROR: SERVER_HOST secret is empty" >&2
+            exit 1
+          fi
+
+          # Verify it resolves before ssh-keyscan complains cryptically.
+          if ! getent hosts "$SERVER_HOST" >/dev/null; then
+            echo "ERROR: SERVER_HOST does not resolve. Length=${#SERVER_HOST}." >&2
+            echo "Make sure the secret is a bare hostname or IP (no http://, no /, no port)." >&2
+            exit 1
+          fi
+
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
 
       - name: Deploy Application
+        env:
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+          SERVER_HOST="$(printf '%s' "$SERVER_HOST" | tr -d '[:space:]')"
+          SERVER_USER="$(printf '%s' "$SERVER_USER" | tr -d '[:space:]')"
+          ssh -o BatchMode=yes "$SERVER_USER@$SERVER_HOST" << 'ENDSSH'
             set -e
 
             # Navigate to application directory
@@ -66,9 +89,12 @@ jobs:
           ENDSSH
 
       - name: Health Check
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
         run: |
           sleep 5
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://${{ secrets.DOMAIN }}/api/health || true)
+          DOMAIN="$(printf '%s' "$DOMAIN" | tr -d '[:space:]')"
+          response=$(curl -s -o /dev/null -w "%{http_code}" "https://$DOMAIN/api/health" || true)
           if [ "$response" = "200" ]; then
             echo "Health check passed"
           else
