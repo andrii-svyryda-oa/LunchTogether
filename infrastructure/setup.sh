@@ -156,9 +156,11 @@ sudo rm -f /etc/nginx/sites-enabled/default
 
 # Chicken-and-egg: our nginx config references /etc/letsencrypt/live/$DOMAIN/*.pem,
 # but Certbot hasn't run yet, so those files don't exist -> `nginx -t` fails ->
-# nginx won't start -> Certbot can't do its HTTP-01 challenge. Drop a short-lived
-# self-signed cert at the expected path so nginx can start; Certbot will replace
-# it with a real Let's Encrypt cert in the very next step.
+# nginx won't start -> Certbot can't do its HTTP-01 challenge.
+# Workaround: drop a short-lived self-signed cert at the expected path so nginx
+# can boot. Nginx loads certs into memory on start, so we can delete the file on
+# disk later without disturbing the running process. Certbot will then write the
+# real Let's Encrypt cert at the same path and a reload will pick it up.
 CERT_DIR="/etc/letsencrypt/live/$DOMAIN"
 if [ ! -s "$CERT_DIR/fullchain.pem" ] || [ ! -s "$CERT_DIR/privkey.pem" ]; then
     echo "   Generating temporary self-signed cert for $DOMAIN..."
@@ -169,7 +171,7 @@ if [ ! -s "$CERT_DIR/fullchain.pem" ] || [ ! -s "$CERT_DIR/privkey.pem" ]; then
         -subj "/CN=$DOMAIN" >/dev/null 2>&1
 fi
 
-# Webroot for the ACME HTTP-01 challenge
+# Webroot for the ACME HTTP-01 challenge (nginx HTTP block serves this path)
 sudo mkdir -p /var/www/certbot
 
 # Test nginx configuration
@@ -179,9 +181,24 @@ sudo systemctl enable nginx
 
 # Setup SSL with Certbot
 echo "15. Setting up SSL certificate..."
-# Delete the dummy cert/dir so Certbot doesn't think a real cert already exists.
-sudo rm -rf "/etc/letsencrypt/live/$DOMAIN" "/etc/letsencrypt/archive/$DOMAIN" "/etc/letsencrypt/renewal/$DOMAIN.conf"
-sudo certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --non-interactive --agree-tos -m "$SSL_EMAIL" --redirect
+# Remove the dummy cert dir so Certbot writes a clean live/ with proper symlinks
+# into archive/. Nginx keeps running because the dummy cert is already loaded
+# into the running process's memory. Don't `nginx -t` or reload between here
+# and the certbot call below, or you'll get BIO_new_file errors.
+sudo rm -rf "/etc/letsencrypt/live/$DOMAIN" \
+            "/etc/letsencrypt/archive/$DOMAIN" \
+            "/etc/letsencrypt/renewal/$DOMAIN.conf"
+
+# Use the `webroot` authenticator (not `--nginx`) because `--nginx` runs
+# `nginx -t` as a pre-check, which fails while the cert paths are missing.
+# Webroot just needs nginx to serve /.well-known/acme-challenge from
+# /var/www/certbot, which our HTTP server block already does.
+sudo certbot certonly --webroot -w /var/www/certbot \
+    -d "$DOMAIN" -d "www.$DOMAIN" \
+    --non-interactive --agree-tos -m "$SSL_EMAIL"
+
+# Real cert is now in place; reload nginx to load it.
+sudo nginx -t
 sudo systemctl reload nginx
 
 # Setup systemd services
