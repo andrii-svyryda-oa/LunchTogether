@@ -27,11 +27,11 @@ cd $APP_DIR/backend
 
 # Install dependencies
 echo "   - Installing dependencies..."
-sudo -u $APP_USER /home/$APP_USER/.cargo/bin/uv sync
+sudo -u $APP_USER /home/$APP_USER/.local/bin/uv sync
 
 # Run migrations
 echo "   - Running database migrations..."
-sudo -u $APP_USER /home/$APP_USER/.cargo/bin/uv run alembic upgrade head
+sudo -u $APP_USER /home/$APP_USER/.local/bin/uv run alembic upgrade head
 
 # Restart backend service
 echo "   - Restarting backend service..."

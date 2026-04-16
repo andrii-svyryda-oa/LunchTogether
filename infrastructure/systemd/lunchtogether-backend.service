@@ -10,11 +10,11 @@ Group=www-data
 WorkingDirectory=APP_DIR_PLACEHOLDER/backend
 EnvironmentFile=APP_DIR_PLACEHOLDER/backend/.env
 
-# Run migrations before starting
-ExecStartPre=/home/APP_USER_PLACEHOLDER/.cargo/bin/uv run alembic upgrade head
-
 # Start the application
-ExecStart=/home/APP_USER_PLACEHOLDER/.cargo/bin/uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 4
+# Note: database migrations are run by the deploy pipeline (deploy.sh / deploy.yml),
+# not as ExecStartPre, so the service can still (re)start even if the DB is briefly
+# unavailable at boot.
+ExecStart=/home/APP_USER_PLACEHOLDER/.local/bin/uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 4
 
 # Restart policy
 Restart=always

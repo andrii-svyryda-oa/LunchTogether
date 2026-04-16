@@ -35,8 +35,8 @@ jobs:
 
             echo "Deploying backend..."
             cd backend
-            sudo -u lunchtogether /home/lunchtogether/.cargo/bin/uv sync
-            sudo -u lunchtogether /home/lunchtogether/.cargo/bin/uv run alembic upgrade head
+            sudo -u lunchtogether /home/lunchtogether/.local/bin/uv sync
+            sudo -u lunchtogether /home/lunchtogether/.local/bin/uv run alembic upgrade head
             sudo systemctl restart lunchtogether-backend
 
             # Wait and check if backend started successfully
@@ -51,8 +51,12 @@ jobs:
 
             echo "Deploying frontend..."
             cd ../frontend
-            sudo -u lunchtogether npm ci --production=false
+            sudo -u lunchtogether npm ci --include=dev
             sudo -u lunchtogether npm run build
+
+            # Make sure nginx (running as www-data) can traverse the dist tree.
+            sudo chown -R lunchtogether:www-data dist
+            sudo chmod -R 755 dist
 
             echo "Reloading nginx..."
             sudo nginx -t

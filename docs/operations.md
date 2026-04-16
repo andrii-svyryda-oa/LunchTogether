@@ -111,7 +111,7 @@ sudo journalctl -u lunchtogether-backend -n 50
 
 # Try running manually to see errors
 cd /var/www/lunchtogether/backend
-sudo -u lunchtogether /home/lunchtogether/.cargo/bin/uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
+sudo -u lunchtogether /home/lunchtogether/.local/bin/uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 # If port is in use
 sudo lsof -i :8000

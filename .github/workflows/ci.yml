@@ -40,25 +40,25 @@ jobs:
       - name: Install dependencies
         working-directory: ./backend
         run: |
-          export PATH="$HOME/.cargo/bin:$PATH"
+          export PATH="$HOME/.local/bin:$PATH"
           uv sync
 
       - name: Run ruff linting
         working-directory: ./backend
         run: |
-          export PATH="$HOME/.cargo/bin:$PATH"
+          export PATH="$HOME/.local/bin:$PATH"
           uv run ruff check .
 
       - name: Run ruff formatting check
         working-directory: ./backend
         run: |
-          export PATH="$HOME/.cargo/bin:$PATH"
+          export PATH="$HOME/.local/bin:$PATH"
           uv run ruff format --check .
 
       - name: Run tests
         working-directory: ./backend
         run: |
-          export PATH="$HOME/.cargo/bin:$PATH"
+          export PATH="$HOME/.local/bin:$PATH"
           uv run pytest
         env:
           DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test

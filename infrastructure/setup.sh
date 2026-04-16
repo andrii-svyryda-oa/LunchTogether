@@ -7,11 +7,12 @@ DB_PASSWORD=${2:-""}
 JWT_SECRET=${3:-""}
 SENTRY_DSN=${4:-""}
 SSL_EMAIL=${5:-""}
+REPO_URL=${6:-""}
 
 # Validate required parameters
-if [ -z "$DOMAIN" ] || [ -z "$DB_PASSWORD" ] || [ -z "$JWT_SECRET" ] || [ -z "$SSL_EMAIL" ]; then
-    echo "Usage: ./setup.sh <domain> <db_password> <jwt_secret> [sentry_dsn] <ssl_email>"
-    echo "Example: ./setup.sh lunchtogether.com dbpass123 jwtsecret123 '' admin@lunchtogether.com"
+if [ -z "$DOMAIN" ] || [ -z "$DB_PASSWORD" ] || [ -z "$JWT_SECRET" ] || [ -z "$SSL_EMAIL" ] || [ -z "$REPO_URL" ]; then
+    echo "Usage: ./setup.sh <domain> <db_password> <jwt_secret> <sentry_dsn|''> <ssl_email> <repo_url>"
+    echo "Example: ./setup.sh lunchtogether.com 'dbpass123' 'jwtsecret123' '' admin@lunchtogether.com https://github.com/org/LunchTogether.git"
     exit 1
 fi
 
@@ -21,6 +22,7 @@ APP_DIR="/var/www/lunchtogether"
 UPLOAD_DIR="/var/www/lunchtogether/uploads"
 DB_NAME="lunchtogether"
 DB_USER="lunchtogether"
+SECRETS_DIR="/etc/lunchtogether"
 
 echo "Setting up LunchTogether on VPS..."
 
@@ -70,7 +72,7 @@ sudo apt install -y certbot python3-certbot-nginx
 # Install uv (Python package manager)
 echo "8. Installing uv..."
 curl -LsSf https://astral.sh/uv/install.sh | sh
-export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 
 # Create application user
 echo "9. Creating application user..."
@@ -79,16 +81,32 @@ sudo usermod -aG www-data $APP_USER
 
 # Install uv for app user
 echo "10. Installing uv for application user..."
-sudo -u $APP_USER bash << EOF
+sudo -u $APP_USER bash << 'EOF'
+set -e
+export UV_INSTALL_DIR="$HOME/.local/bin"
+mkdir -p "$UV_INSTALL_DIR"
 curl -LsSf https://astral.sh/uv/install.sh | sh
 EOF
 
-# Create application directory
-echo "11. Creating application directories..."
-sudo mkdir -p $APP_DIR/{backend,frontend,logs}
-sudo mkdir -p $UPLOAD_DIR
-sudo chown -R $APP_USER:www-data $APP_DIR
-sudo chmod -R 755 $APP_DIR
+# Create application directory and clone repo
+echo "11. Creating application directories and cloning repository..."
+sudo mkdir -p "$(dirname "$APP_DIR")"
+sudo chown "$APP_USER":www-data "$(dirname "$APP_DIR")"
+
+if [ ! -d "$APP_DIR/.git" ]; then
+    # Fresh install: clone into the (possibly empty) app dir as the app user
+    sudo rm -rf "$APP_DIR"
+    sudo -u "$APP_USER" git clone "$REPO_URL" "$APP_DIR"
+else
+    echo "   Repo already present at $APP_DIR, fetching latest main..."
+    sudo -u "$APP_USER" git -C "$APP_DIR" fetch origin
+    sudo -u "$APP_USER" git -C "$APP_DIR" reset --hard origin/main
+fi
+
+sudo mkdir -p "$APP_DIR/logs"
+sudo mkdir -p "$UPLOAD_DIR"
+sudo chown -R "$APP_USER":www-data "$APP_DIR"
+sudo chmod -R 755 "$APP_DIR"
 
 # Setup PostgreSQL
 echo "12. Setting up PostgreSQL..."
@@ -108,8 +126,12 @@ sudo systemctl restart postgresql
 sudo systemctl enable postgresql
 
 # Create .env file
+# Note: we must use `tee`, not `sudo -u ... cat > file`, because the `>` redirect
+# is evaluated by the caller's shell, not by sudo. Using cat + redirect would
+# write the file as the invoking user (often root) with default permissions
+# and leak the secrets below to anyone who can read /var/www/lunchtogether.
 echo "13. Creating environment configuration..."
-sudo -u $APP_USER cat > $APP_DIR/backend/.env << EOF
+sudo -u "$APP_USER" tee "$APP_DIR/backend/.env" > /dev/null << EOF
 # Database
 DATABASE_URL=postgresql+asyncpg://$DB_USER:$DB_PASSWORD@localhost:5432/$DB_NAME
 
@@ -131,6 +153,8 @@ CORS_ORIGINS=["https://$DOMAIN","https://www.$DOMAIN"]
 # Environment
 ENVIRONMENT=production
 EOF
+sudo chown "$APP_USER":"$APP_USER" "$APP_DIR/backend/.env"
+sudo chmod 600 "$APP_DIR/backend/.env"
 
 # Setup Nginx
 echo "14. Configuring Nginx..."
@@ -165,8 +189,10 @@ sudo ufw allow 443/tcp
 sudo ufw --force enable
 
 # Setup log rotation
+# Note: `sudo cat > /path` only elevates `cat`; the `>` redirect runs as the
+# caller and fails with "Permission denied" on /etc/logrotate.d. Use `sudo tee`.
 echo "18. Setting up log rotation..."
-sudo cat > /etc/logrotate.d/lunchtogether << EOF
+sudo tee /etc/logrotate.d/lunchtogether > /dev/null << EOF
 $APP_DIR/logs/*.log {
     daily
     missingok
@@ -185,18 +211,25 @@ echo "19. Setting up SSL certificate auto-renewal..."
 
 # Setup cron job for database backup
 echo "20. Setting up automated database backups..."
-sudo cp $APP_DIR/infrastructure/scripts/backup-db.sh /usr/local/bin/backup-lunchtogether-db
-sudo chmod +x /usr/local/bin/backup-lunchtogether-db
-sudo sed -i "s|DB_PASSWORD_PLACEHOLDER|$DB_PASSWORD|g" /usr/local/bin/backup-lunchtogether-db
+# Write the DB password to a root-only secrets file instead of sed-replacing it
+# into a world-readable script in /usr/local/bin. Using `tee` so the redirect
+# runs with elevated privileges.
+sudo mkdir -p "$SECRETS_DIR"
+sudo chmod 700 "$SECRETS_DIR"
+printf 'PGPASSWORD=%s\n' "$DB_PASSWORD" | sudo tee "$SECRETS_DIR/backup.env" > /dev/null
+sudo chmod 600 "$SECRETS_DIR/backup.env"
+sudo chown root:root "$SECRETS_DIR/backup.env"
+
+sudo install -m 0755 "$APP_DIR/infrastructure/scripts/backup-db.sh" /usr/local/bin/backup-lunchtogether-db
 (sudo crontab -l 2>/dev/null || true; echo "0 2 * * * /usr/local/bin/backup-lunchtogether-db") | sudo crontab -
 
 echo ""
 echo "Server setup complete!"
 echo ""
 echo "Next steps:"
-echo "1. Clone your repository to $APP_DIR"
-echo "2. Deploy your application using: cd $APP_DIR && sudo ./infrastructure/deploy.sh"
-echo "3. The application will be available at: https://$DOMAIN"
+echo "1. Run the first deploy:   cd $APP_DIR && sudo ./infrastructure/deploy.sh"
+echo "2. Verify the app:          https://$DOMAIN"
+echo "3. Verify health endpoint:  curl https://$DOMAIN/api/health"
 echo ""
 echo "Useful commands:"
 echo "  - View backend logs: sudo journalctl -u lunchtogether-backend -f"

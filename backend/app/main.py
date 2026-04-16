@@ -49,7 +49,7 @@ def create_app() -> FastAPI:
     app.include_router(api_router)
 
     # Health check
-    @app.get("/health")
+    @app.get("/api/health")
     async def health_check() -> dict[str, str]:
         return {"status": "ok"}
 
