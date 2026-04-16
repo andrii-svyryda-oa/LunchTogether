@@ -43,7 +43,7 @@ class EmailService:
     ) -> None:
         """Send a group invitation email."""
         accept_url = f"{settings.frontend_url}/invitations/accept?token={token}"
-        subject = f"You've been invited to join \"{group_name}\" on LunchTogether"
+        subject = f'You\'ve been invited to join "{group_name}" on LunchTogether'
 
         html_body = f"""\
 <!DOCTYPE html>
@@ -112,4 +112,3 @@ class EmailService:
 </html>"""
 
         await self.send_email(to_email, subject, html_body)
-

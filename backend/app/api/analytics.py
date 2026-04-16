@@ -74,9 +74,8 @@ async def get_group_analytics(
     )
     items_spent = (await session.execute(items_spent_query)).scalar_one()
 
-    delivery_spent_query = (
-        select(func.coalesce(func.sum(Order.delivery_fee_total), 0))
-        .where(Order.group_id == group_id, Order.status == OrderStatus.FINISHED)
+    delivery_spent_query = select(func.coalesce(func.sum(Order.delivery_fee_total), 0)).where(
+        Order.group_id == group_id, Order.status == OrderStatus.FINISHED
     )
     delivery_spent = (await session.execute(delivery_spent_query)).scalar_one()
 
@@ -130,13 +129,10 @@ async def get_user_analytics(
 
     # Sum delivery_fee_per_person for each finished order the user participated in
     user_orders_subquery = (
-        select(func.distinct(OrderItem.order_id))
-        .where(OrderItem.user_id == current_user.id)
-        .scalar_subquery()
+        select(func.distinct(OrderItem.order_id)).where(OrderItem.user_id == current_user.id).scalar_subquery()
     )
-    delivery_spent_query = (
-        select(func.coalesce(func.sum(Order.delivery_fee_per_person), 0))
-        .where(Order.id.in_(user_orders_subquery), Order.status == OrderStatus.FINISHED)
+    delivery_spent_query = select(func.coalesce(func.sum(Order.delivery_fee_per_person), 0)).where(
+        Order.id.in_(user_orders_subquery), Order.status == OrderStatus.FINISHED
     )
     delivery_spent = (await session.execute(delivery_spent_query)).scalar_one()
 

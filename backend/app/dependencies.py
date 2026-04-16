@@ -190,8 +190,8 @@ async def get_current_user(
 
     try:
         user_id = uuid.UUID(subject)
-    except ValueError:
-        raise AuthError(detail="Invalid token payload")
+    except ValueError as err:
+        raise AuthError(detail="Invalid token payload") from err
 
     user = await user_repository.get_by_id(user_id)
     if user is None:

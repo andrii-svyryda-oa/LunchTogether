@@ -28,4 +28,3 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_column("order_items", "quantity")
-

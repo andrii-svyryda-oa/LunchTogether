@@ -7,24 +7,9 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  backend-lint-test:
-    name: Backend Lint & Test
+  backend-lint:
+    name: Backend Lint
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: test
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
 
     steps:
       - uses: actions/checkout@v4
@@ -37,11 +22,11 @@ jobs:
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
-      - name: Install dependencies
+      - name: Install dependencies (incl. dev group)
         working-directory: ./backend
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          uv sync
+          uv sync --dev
 
       - name: Run ruff linting
         working-directory: ./backend
@@ -55,18 +40,20 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           uv run ruff format --check .
 
-      - name: Run tests
-        working-directory: ./backend
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          uv run pytest
-        env:
-          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
-          JWT_SECRET_KEY: test-secret-key
-          UPLOAD_DIR: /tmp/uploads
+      # Tests step intentionally omitted: no pytest suite exists yet.
+      # Re-add once tests are written, e.g.:
+      # - name: Run tests
+      #   working-directory: ./backend
+      #   run: |
+      #     export PATH="$HOME/.local/bin:$PATH"
+      #     uv run pytest
+      #   env:
+      #     DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
+      #     JWT_SECRET_KEY: test-secret-key
+      #     UPLOAD_DIR: /tmp/uploads
 
-  frontend-lint-test:
-    name: Frontend Lint & Test
+  frontend-build:
+    name: Frontend Build & Type Check
     runs-on: ubuntu-latest
 
     steps:
@@ -83,18 +70,16 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
-      - name: Run ESLint
-        working-directory: ./frontend
-        run: npm run lint
-
-      - name: Run TypeScript check
+      - name: TypeScript check
         working-directory: ./frontend
         run: npm run type-check
-
-      - name: Run tests
-        working-directory: ./frontend
-        run: npm run test
 
       - name: Build
         working-directory: ./frontend
         run: npm run build
+
+      # ESLint and test steps intentionally omitted: no ESLint config or test
+      # runner is set up yet. Re-enable after adding eslint.config.js and a
+      # test framework (e.g. vitest):
+      # - run: npm run lint
+      # - run: npm run test
