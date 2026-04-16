@@ -154,6 +154,24 @@ sudo sed -i "s|APP_DIR_PLACEHOLDER|$APP_DIR|g" /etc/nginx/sites-available/luncht
 sudo ln -sf /etc/nginx/sites-available/lunchtogether /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 
+# Chicken-and-egg: our nginx config references /etc/letsencrypt/live/$DOMAIN/*.pem,
+# but Certbot hasn't run yet, so those files don't exist -> `nginx -t` fails ->
+# nginx won't start -> Certbot can't do its HTTP-01 challenge. Drop a short-lived
+# self-signed cert at the expected path so nginx can start; Certbot will replace
+# it with a real Let's Encrypt cert in the very next step.
+CERT_DIR="/etc/letsencrypt/live/$DOMAIN"
+if [ ! -s "$CERT_DIR/fullchain.pem" ] || [ ! -s "$CERT_DIR/privkey.pem" ]; then
+    echo "   Generating temporary self-signed cert for $DOMAIN..."
+    sudo mkdir -p "$CERT_DIR"
+    sudo openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
+        -keyout "$CERT_DIR/privkey.pem" \
+        -out "$CERT_DIR/fullchain.pem" \
+        -subj "/CN=$DOMAIN" >/dev/null 2>&1
+fi
+
+# Webroot for the ACME HTTP-01 challenge
+sudo mkdir -p /var/www/certbot
+
 # Test nginx configuration
 sudo nginx -t
 sudo systemctl restart nginx
@@ -161,7 +179,10 @@ sudo systemctl enable nginx
 
 # Setup SSL with Certbot
 echo "15. Setting up SSL certificate..."
-sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos -m $SSL_EMAIL --redirect
+# Delete the dummy cert/dir so Certbot doesn't think a real cert already exists.
+sudo rm -rf "/etc/letsencrypt/live/$DOMAIN" "/etc/letsencrypt/archive/$DOMAIN" "/etc/letsencrypt/renewal/$DOMAIN.conf"
+sudo certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --non-interactive --agree-tos -m "$SSL_EMAIL" --redirect
+sudo systemctl reload nginx
 
 # Setup systemd services
 echo "16. Creating systemd services..."
