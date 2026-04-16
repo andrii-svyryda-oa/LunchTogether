@@ -30,13 +30,27 @@ export function GroupDetailPage() {
   const { data: myBalance } = useGetMyBalanceQuery(groupId!);
 
   // Auto-navigate to active order only when entering via group icon (not explicit dashboard click)
-  const shouldAutoNavigate = (location.state as { autoNavigate?: boolean })?.autoNavigate === true;
+  const shouldAutoNavigate =
+    (location.state as { autoNavigate?: boolean })?.autoNavigate === true;
 
   useEffect(() => {
-    if (shouldAutoNavigate && user?.navigate_to_active_order && activeOrder?.id && groupId) {
-      navigate(`/groups/${groupId}/orders/${activeOrder.id}`, { replace: true });
+    if (
+      shouldAutoNavigate &&
+      user?.navigate_to_active_order &&
+      activeOrder?.id &&
+      groupId
+    ) {
+      navigate(`/groups/${groupId}/orders/${activeOrder.id}`, {
+        replace: true,
+      });
     }
-  }, [shouldAutoNavigate, user?.navigate_to_active_order, activeOrder?.id, groupId, navigate]);
+  }, [
+    shouldAutoNavigate,
+    user?.navigate_to_active_order,
+    activeOrder?.id,
+    groupId,
+    navigate,
+  ]);
 
   if (isLoading) {
     return (
@@ -49,8 +63,6 @@ export function GroupDetailPage() {
   if (error || !group) {
     return <Alert variant="destructive">Failed to load group.</Alert>;
   }
-
-  const isOwner = group.owner_id === user?.id;
 
   return (
     <div>
@@ -196,7 +208,7 @@ export function GroupDetailPage() {
                   "flex h-10 w-10 items-center justify-center rounded-xl",
                   Number(myBalance.amount) >= 0
                     ? "bg-emerald-50 text-emerald-600"
-                    : "bg-red-50 text-red-600"
+                    : "bg-red-50 text-red-600",
                 )}
               >
                 <Wallet className="h-5 w-5" />
@@ -210,7 +222,7 @@ export function GroupDetailPage() {
                     "text-2xl font-bold",
                     Number(myBalance.amount) >= 0
                       ? "text-emerald-600"
-                      : "text-red-600"
+                      : "text-red-600",
                   )}
                 >
                   {Number(myBalance.amount).toFixed(2)} ₴

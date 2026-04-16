@@ -1,6 +1,5 @@
 import { env } from "@/config/env";
-import { API_ENDPOINTS, API_TAG_TYPES } from "@/constants";
-import { ROUTES } from "@/constants";
+import { API_ENDPOINTS, API_TAG_TYPES, ROUTES } from "@/constants";
 import type {
   BaseQueryFn,
   FetchArgs,
@@ -18,7 +17,7 @@ const rawBaseQuery = fetchBaseQuery({
 });
 
 /** Auth endpoints that should NOT trigger a redirect on 401. */
-const AUTH_ENDPOINTS = new Set([
+const AUTH_ENDPOINTS = new Set<string>([
   API_ENDPOINTS.AUTH.LOGIN,
   API_ENDPOINTS.AUTH.REGISTER,
   API_ENDPOINTS.AUTH.LOGOUT,
