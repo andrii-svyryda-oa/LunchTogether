@@ -93,16 +93,6 @@ echo "11. Creating application directories and cloning repository..."
 sudo mkdir -p "$(dirname "$APP_DIR")"
 sudo chown "$APP_USER":www-data "$(dirname "$APP_DIR")"
 
-if [ ! -d "$APP_DIR/.git" ]; then
-    # Fresh install: clone into the (possibly empty) app dir as the app user
-    sudo rm -rf "$APP_DIR"
-    sudo -u "$APP_USER" git clone "$REPO_URL" "$APP_DIR"
-else
-    echo "   Repo already present at $APP_DIR, fetching latest main..."
-    sudo -u "$APP_USER" git -C "$APP_DIR" fetch origin
-    sudo -u "$APP_USER" git -C "$APP_DIR" reset --hard origin/main
-fi
-
 sudo mkdir -p "$APP_DIR/logs"
 sudo mkdir -p "$UPLOAD_DIR"
 sudo chown -R "$APP_USER":www-data "$APP_DIR"
