@@ -5,5 +5,5 @@ interface EnvConfig {
 
 export const env: EnvConfig = {
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? "/api",
-  appName: import.meta.env.VITE_APP_NAME ?? "LunchTogether1",
+  appName: import.meta.env.VITE_APP_NAME ?? "LunchTogether",
 };
