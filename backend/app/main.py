@@ -20,6 +20,7 @@ if settings.sentry_dsn:
         dsn=settings.sentry_dsn,
         environment=settings.environment,
         traces_sample_rate=1.0 if settings.is_development else 0.1,
+        enable_logs=True,
     )
 
 
