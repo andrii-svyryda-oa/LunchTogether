@@ -48,5 +48,4 @@ async def logout(response: Response) -> dict[str, str]:
 async def get_me(
     current_user: User = Depends(get_current_user),
 ) -> UserResponse:
-    raise RuntimeError("test")
     return UserResponse.model_validate(current_user)
