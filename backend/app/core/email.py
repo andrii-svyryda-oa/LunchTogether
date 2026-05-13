@@ -31,8 +31,7 @@ class EmailService:
             logger.info("Email sent to %s: %s", to, subject)
         except Exception:
             logger.exception("Failed to send email to %s: %s", to, subject)
-            if not settings.is_development:
-                raise
+            raise
 
     async def send_invitation_email(
         self,

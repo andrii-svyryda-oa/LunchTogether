@@ -3,11 +3,8 @@
 from decimal import Decimal
 
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import BalancesScope, GroupRole, PermissionType
-from app.repositories.balance import BalanceRepository
-from tests.conftest import set_member_permission
+from app.models.enums import GroupRole
 
 
 class TestListBalances:

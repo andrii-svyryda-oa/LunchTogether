@@ -3,11 +3,11 @@ from pydantic import BaseModel
 from app.core.exceptions import AuthError
 from app.core.security import create_access_token, verify_password
 from app.repositories.user import UserRepository
-from app.schemas.user import UserLogin, UserResponse
+from app.schemas.user import UserLoginRequest, UserResponse
 
 
 class LoginInput(BaseModel):
-    data: UserLogin
+    data: UserLoginRequest
 
 
 class LoginOutput(BaseModel):
@@ -34,7 +34,7 @@ class LoginWorkflow:
             raise AuthError(detail="User account is deactivated")
 
         # Generate JWT token
-        access_token = create_access_token(subject=str(user.id))
+        access_token = create_access_token(subject=user.id)
 
         return LoginOutput(
             access_token=access_token,

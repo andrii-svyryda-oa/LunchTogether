@@ -3,9 +3,7 @@
 import io
 
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import GroupRole, MembersScope, PermissionType, UserRole
 from app.workflows.group.create import MAX_GROUPS_PER_USER
 
 

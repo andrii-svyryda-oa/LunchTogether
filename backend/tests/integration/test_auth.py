@@ -1,8 +1,6 @@
 """Integration tests for the authentication endpoints (§6.4.1 — 11 tests)."""
 
-import pytest
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class TestRegister:

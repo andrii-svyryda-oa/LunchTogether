@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from pydantic import Field
 
+from app.models.enums import BalanceChangeType
 from app.schemas.base import BaseSchema
 
 # --- Balance ---
@@ -22,7 +23,7 @@ class BalanceResponse(BaseSchema):
 # --- Balance Adjustment ---
 
 
-class BalanceAdjustment(BaseSchema):
+class BalanceAdjustmentCreate(BaseSchema):
     user_id: uuid.UUID
     amount: Decimal = Field(decimal_places=2)
     note: str | None = Field(default=None, max_length=500)
@@ -37,7 +38,7 @@ class BalanceHistoryResponse(BaseSchema):
     amount: Decimal
     balance_after: Decimal
     note: str | None
-    change_type: str
+    change_type: BalanceChangeType
     order_id: uuid.UUID | None
     created_by_id: uuid.UUID | None
     created_at: datetime

@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from pydantic import Field
 
+from app.models.enums import OrderStatus
 from app.schemas.base import BaseSchema
 
 # --- Order ---
@@ -14,11 +15,11 @@ class OrderCreate(BaseSchema):
     restaurant_name: str | None = Field(default=None, max_length=255)
 
 
-class OrderUpdateStatus(BaseSchema):
+class OrderStatusUpdate(BaseSchema):
     status: str
 
 
-class OrderSetDeliveryFee(BaseSchema):
+class OrderDeliveryFeeUpdate(BaseSchema):
     """Set delivery/packing fee. Either total (divided equally) or per_person."""
 
     delivery_fee_total: Decimal | None = Field(default=None, ge=0, decimal_places=2)
@@ -31,7 +32,7 @@ class OrderResponse(BaseSchema):
     restaurant_id: uuid.UUID | None
     restaurant_name: str | None
     initiator_id: uuid.UUID
-    status: str
+    status: OrderStatus
     delivery_fee_total: Decimal | None
     delivery_fee_per_person: Decimal | None
     created_at: datetime

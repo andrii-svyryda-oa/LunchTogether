@@ -2,19 +2,28 @@ import uuid
 
 from fastapi import APIRouter, Depends, UploadFile
 
-from app.core.exceptions import ForbiddenError, NotFoundError
-from app.core.storage import save_upload
+from app.core.exceptions import NotFoundError
 from app.dependencies import (
+    get_accept_invitation_workflow,
+    get_add_member_workflow,
+    get_cancel_invitation_workflow,
     get_create_group_workflow,
+    get_create_invitation_workflow,
     get_current_user,
-    get_group_member_repository,
-    get_group_repository,
-    get_invite_workflow,
-    get_manage_members_workflow,
+    get_decline_invitation_workflow,
+    get_delete_group_workflow,
+    get_get_group_detail_workflow,
+    get_list_groups_workflow,
+    get_list_members_workflow,
+    get_list_my_pending_workflow,
+    get_list_pending_for_group_workflow,
+    get_preview_by_token_workflow,
+    get_remove_member_workflow,
+    get_update_group_workflow,
+    get_update_member_workflow,
+    get_upload_group_logo_workflow,
 )
-from app.models.enums import MembersScope, PermissionType
 from app.models.user import User
-from app.repositories.group import GroupMemberRepository, GroupRepository
 from app.schemas.base import MessageResponse
 from app.schemas.group import (
     GroupCreate,
@@ -29,22 +38,24 @@ from app.schemas.group import (
     InvitationPreviewResponse,
     InvitationResponse,
     MyInvitationResponse,
-    PermissionResponse,
 )
+from app.workflows.group.add_member import AddMemberInput, AddMemberWorkflow
 from app.workflows.group.create import CreateGroupInput, CreateGroupWorkflow
-from app.workflows.group.invite import (
-    AcceptInviteInput,
-    CancelInvitationInput,
-    InviteInput,
-    InviteWorkflow,
-    ListInvitationsInput,
-)
-from app.workflows.group.manage_members import (
-    AddMemberInput,
-    ManageMembersWorkflow,
-    RemoveMemberInput,
-    UpdateMemberInput,
-)
+from app.workflows.group.delete import DeleteGroupInput, DeleteGroupWorkflow
+from app.workflows.group.get_detail import GetGroupDetailInput, GetGroupDetailWorkflow
+from app.workflows.group.list import ListGroupsInput, ListGroupsWorkflow
+from app.workflows.group.list_members import ListMembersInput, ListMembersWorkflow
+from app.workflows.group.remove_member import RemoveMemberInput, RemoveMemberWorkflow
+from app.workflows.group.update import UpdateGroupInput, UpdateGroupWorkflow
+from app.workflows.group.update_member import UpdateMemberInput, UpdateMemberWorkflow
+from app.workflows.group.upload_logo import UploadGroupLogoInput, UploadGroupLogoWorkflow
+from app.workflows.invitation.accept import AcceptInvitationInput, AcceptInvitationWorkflow
+from app.workflows.invitation.cancel import CancelInvitationInput, CancelInvitationWorkflow
+from app.workflows.invitation.create import CreateInvitationInput, CreateInvitationWorkflow
+from app.workflows.invitation.decline import DeclineInvitationInput, DeclineInvitationWorkflow
+from app.workflows.invitation.list_my_pending import ListMyPendingInput, ListMyPendingWorkflow
+from app.workflows.invitation.list_pending_for_group import ListPendingForGroupInput, ListPendingForGroupWorkflow
+from app.workflows.invitation.preview_by_token import PreviewByTokenInput, PreviewByTokenWorkflow
 
 router = APIRouter(prefix="/groups", tags=["groups"])
 
@@ -55,15 +66,10 @@ router = APIRouter(prefix="/groups", tags=["groups"])
 @router.get("", response_model=list[GroupResponse])
 async def list_groups(
     current_user: User = Depends(get_current_user),
-    group_repository: GroupRepository = Depends(get_group_repository),
+    workflow: ListGroupsWorkflow = Depends(get_list_groups_workflow),
 ) -> list[GroupResponse]:
-    """List groups for the current user (admins see all)."""
-    if current_user.is_admin:
-        result = await group_repository.get_multi(page=1, page_size=1000)
-        return [GroupResponse.model_validate(g) for g in result.items]
-    else:
-        groups = await group_repository.get_groups_for_user(current_user.id)
-        return [GroupResponse.model_validate(g) for g in groups]
+    result = await workflow.execute(ListGroupsInput(current_user=current_user))
+    return result.groups
 
 
 @router.post("", response_model=GroupResponse, status_code=201)
@@ -80,37 +86,10 @@ async def create_group(
 async def get_group(
     group_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
-    group_repository: GroupRepository = Depends(get_group_repository),
-    group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
+    workflow: GetGroupDetailWorkflow = Depends(get_get_group_detail_workflow),
 ) -> GroupDetailResponse:
-    group = await group_repository.get_with_members(group_id)
-    if group is None:
-        raise NotFoundError(detail="Group not found")
-
-    # Check access
-    if not current_user.is_admin:
-        membership = await group_member_repository.get_membership(current_user.id, group_id)
-        if membership is None:
-            raise ForbiddenError(detail="You are not a member of this group")
-
-    members = [
-        GroupMemberResponse(
-            id=m.id,
-            user_id=m.user_id,
-            group_id=m.group_id,
-            permissions=[PermissionResponse(permission_type=p.permission_type, level=p.level) for p in m.permissions],
-            created_at=m.created_at,
-            updated_at=m.updated_at,
-            user_full_name=m.user.full_name if m.user else None,
-            user_email=m.user.email if m.user else None,
-        )
-        for m in group.members
-    ]
-
-    return GroupDetailResponse(
-        **{k: getattr(group, k) for k in GroupResponse.model_fields if hasattr(group, k)},
-        members=members,
-    )
+    result = await workflow.execute(GetGroupDetailInput(group_id=group_id, current_user=current_user))
+    return result.group
 
 
 @router.patch("/{group_id}", response_model=GroupResponse)
@@ -118,25 +97,10 @@ async def update_group(
     group_id: uuid.UUID,
     data: GroupUpdate,
     current_user: User = Depends(get_current_user),
-    group_repository: GroupRepository = Depends(get_group_repository),
-    group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
+    workflow: UpdateGroupWorkflow = Depends(get_update_group_workflow),
 ) -> GroupResponse:
-    group = await group_repository.get_by_id(group_id)
-    if group is None:
-        raise NotFoundError(detail="Group not found")
-
-    # Only owner, members editors, or admins can update
-    if not current_user.is_admin and group.owner_id != current_user.id:
-        membership = await group_member_repository.get_membership(current_user.id, group_id)
-        if membership is None or membership.get_permission(PermissionType.MEMBERS) != MembersScope.EDITOR:
-            raise ForbiddenError(detail="You do not have permission to update this group")
-
-    update_data = data.model_dump(exclude_unset=True)
-    if not update_data:
-        return GroupResponse.model_validate(group)
-
-    updated = await group_repository.update(group_id, update_data)
-    return GroupResponse.model_validate(updated)
+    result = await workflow.execute(UpdateGroupInput(group_id=group_id, data=data, current_user=current_user))
+    return result.group
 
 
 @router.post("/{group_id}/logo", response_model=GroupResponse)
@@ -144,37 +108,19 @@ async def upload_group_logo(
     group_id: uuid.UUID,
     file: UploadFile,
     current_user: User = Depends(get_current_user),
-    group_repository: GroupRepository = Depends(get_group_repository),
-    group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
+    workflow: UploadGroupLogoWorkflow = Depends(get_upload_group_logo_workflow),
 ) -> GroupResponse:
-    group = await group_repository.get_by_id(group_id)
-    if group is None:
-        raise NotFoundError(detail="Group not found")
-
-    if not current_user.is_admin and group.owner_id != current_user.id:
-        membership = await group_member_repository.get_membership(current_user.id, group_id)
-        if membership is None or membership.get_permission(PermissionType.MEMBERS) != MembersScope.EDITOR:
-            raise ForbiddenError(detail="You do not have permission to update this group")
-
-    file_path = await save_upload(file, subdirectory="group-logos")
-    updated = await group_repository.update(group_id, {"logo_path": file_path})
-    return GroupResponse.model_validate(updated)
+    result = await workflow.execute(UploadGroupLogoInput(group_id=group_id, file=file, current_user=current_user))
+    return result.group
 
 
 @router.delete("/{group_id}", response_model=MessageResponse)
 async def delete_group(
     group_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
-    group_repository: GroupRepository = Depends(get_group_repository),
+    workflow: DeleteGroupWorkflow = Depends(get_delete_group_workflow),
 ) -> MessageResponse:
-    group = await group_repository.get_by_id(group_id)
-    if group is None:
-        raise NotFoundError(detail="Group not found")
-
-    if not current_user.is_admin and group.owner_id != current_user.id:
-        raise ForbiddenError(detail="Only the group owner or an admin can delete this group")
-
-    await group_repository.delete(group_id)
+    await workflow.execute(DeleteGroupInput(group_id=group_id, current_user=current_user))
     return MessageResponse(message="Group deleted successfully")
 
 
@@ -185,28 +131,10 @@ async def delete_group(
 async def list_members(
     group_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
-    group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
+    workflow: ListMembersWorkflow = Depends(get_list_members_workflow),
 ) -> list[GroupMemberResponse]:
-    # Check access
-    if not current_user.is_admin:
-        membership = await group_member_repository.get_membership(current_user.id, group_id)
-        if membership is None:
-            raise ForbiddenError(detail="You are not a member of this group")
-
-    members = await group_member_repository.get_members_for_group(group_id)
-    return [
-        GroupMemberResponse(
-            id=m.id,
-            user_id=m.user_id,
-            group_id=m.group_id,
-            permissions=[PermissionResponse(permission_type=p.permission_type, level=p.level) for p in m.permissions],
-            created_at=m.created_at,
-            updated_at=m.updated_at,
-            user_full_name=m.user.full_name if m.user else None,
-            user_email=m.user.email if m.user else None,
-        )
-        for m in members
-    ]
+    result = await workflow.execute(ListMembersInput(group_id=group_id, current_user=current_user))
+    return result.members
 
 
 @router.post("/{group_id}/members", response_model=GroupMemberResponse, status_code=201)
@@ -214,9 +142,9 @@ async def add_member(
     group_id: uuid.UUID,
     data: GroupMemberCreate,
     current_user: User = Depends(get_current_user),
-    workflow: ManageMembersWorkflow = Depends(get_manage_members_workflow),
+    workflow: AddMemberWorkflow = Depends(get_add_member_workflow),
 ) -> GroupMemberResponse:
-    result = await workflow.add_member(AddMemberInput(group_id=group_id, data=data, current_user=current_user))
+    result = await workflow.execute(AddMemberInput(group_id=group_id, data=data, current_user=current_user))
     return result.member
 
 
@@ -226,9 +154,9 @@ async def update_member(
     member_user_id: uuid.UUID,
     data: GroupMemberUpdate,
     current_user: User = Depends(get_current_user),
-    workflow: ManageMembersWorkflow = Depends(get_manage_members_workflow),
+    workflow: UpdateMemberWorkflow = Depends(get_update_member_workflow),
 ) -> GroupMemberResponse:
-    result = await workflow.update_member(
+    result = await workflow.execute(
         UpdateMemberInput(group_id=group_id, member_user_id=member_user_id, data=data, current_user=current_user)
     )
     return result.member
@@ -239,12 +167,12 @@ async def remove_member(
     group_id: uuid.UUID,
     member_user_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
-    workflow: ManageMembersWorkflow = Depends(get_manage_members_workflow),
+    workflow: RemoveMemberWorkflow = Depends(get_remove_member_workflow),
 ) -> MessageResponse:
-    removed = await workflow.remove_member(
+    result = await workflow.execute(
         RemoveMemberInput(group_id=group_id, member_user_id=member_user_id, current_user=current_user)
     )
-    if not removed:
+    if not result.removed:
         raise NotFoundError(detail="Member not found")
     return MessageResponse(message="Member removed successfully")
 
@@ -256,12 +184,9 @@ async def remove_member(
 async def list_pending_invitations(
     group_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
-    workflow: InviteWorkflow = Depends(get_invite_workflow),
+    workflow: ListPendingForGroupWorkflow = Depends(get_list_pending_for_group_workflow),
 ) -> list[InvitationResponse]:
-    """List pending invitations for a group."""
-    result = await workflow.list_pending_invitations(
-        ListInvitationsInput(group_id=group_id, current_user=current_user)
-    )
+    result = await workflow.execute(ListPendingForGroupInput(group_id=group_id, current_user=current_user))
     return result.invitations
 
 
@@ -270,9 +195,9 @@ async def create_invitation(
     group_id: uuid.UUID,
     data: InvitationCreate,
     current_user: User = Depends(get_current_user),
-    workflow: InviteWorkflow = Depends(get_invite_workflow),
+    workflow: CreateInvitationWorkflow = Depends(get_create_invitation_workflow),
 ) -> InvitationResponse:
-    result = await workflow.create_invitation(InviteInput(group_id=group_id, data=data, current_user=current_user))
+    result = await workflow.execute(CreateInvitationInput(group_id=group_id, data=data, current_user=current_user))
     return result.invitation
 
 
@@ -281,9 +206,9 @@ async def cancel_invitation(
     group_id: uuid.UUID,
     invitation_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
-    workflow: InviteWorkflow = Depends(get_invite_workflow),
+    workflow: CancelInvitationWorkflow = Depends(get_cancel_invitation_workflow),
 ) -> MessageResponse:
-    await workflow.cancel_invitation(
+    await workflow.execute(
         CancelInvitationInput(group_id=group_id, invitation_id=invitation_id, current_user=current_user)
     )
     return MessageResponse(message="Invitation cancelled")
@@ -292,28 +217,28 @@ async def cancel_invitation(
 @router.get("/invitations/by-token/{token}", response_model=InvitationPreviewResponse)
 async def preview_invitation(
     token: str,
-    workflow: InviteWorkflow = Depends(get_invite_workflow),
+    workflow: PreviewByTokenWorkflow = Depends(get_preview_by_token_workflow),
 ) -> InvitationPreviewResponse:
-    """Public endpoint — no authentication required. Returns invite preview for the accept page."""
-    return await workflow.preview_by_token(token)
+    result = await workflow.execute(PreviewByTokenInput(token=token))
+    return result.preview
 
 
 @router.get("/invitations/mine", response_model=list[MyInvitationResponse])
 async def my_pending_invitations(
     current_user: User = Depends(get_current_user),
-    workflow: InviteWorkflow = Depends(get_invite_workflow),
+    workflow: ListMyPendingWorkflow = Depends(get_list_my_pending_workflow),
 ) -> list[MyInvitationResponse]:
-    """Returns all pending invitations for the currently authenticated user."""
-    return await workflow.list_my_pending(current_user)
+    result = await workflow.execute(ListMyPendingInput(current_user=current_user))
+    return result.invitations
 
 
 @router.post("/invitations/{token}/accept", response_model=InvitationAcceptResponse)
 async def accept_invitation(
     token: str,
     current_user: User = Depends(get_current_user),
-    workflow: InviteWorkflow = Depends(get_invite_workflow),
+    workflow: AcceptInvitationWorkflow = Depends(get_accept_invitation_workflow),
 ) -> InvitationAcceptResponse:
-    result = await workflow.accept_invitation(AcceptInviteInput(token=token, current_user=current_user))
+    result = await workflow.execute(AcceptInvitationInput(token=token, current_user=current_user))
     return result.result
 
 
@@ -321,7 +246,7 @@ async def accept_invitation(
 async def decline_invitation(
     token: str,
     current_user: User = Depends(get_current_user),
-    workflow: InviteWorkflow = Depends(get_invite_workflow),
+    workflow: DeclineInvitationWorkflow = Depends(get_decline_invitation_workflow),
 ) -> MessageResponse:
-    await workflow.decline_invitation(token, current_user)
+    await workflow.execute(DeclineInvitationInput(token=token, current_user=current_user))
     return MessageResponse(message="Invitation declined")

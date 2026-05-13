@@ -1,16 +1,12 @@
 """Integration tests for permission enforcement (§6.4.5 — 8 tests)."""
 
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import (
-    AnalyticsScope,
-    BalancesScope,
     GroupRole,
     MembersScope,
     OrdersScope,
     PermissionType,
-    UserRole,
 )
 from tests.conftest import set_member_permission
 

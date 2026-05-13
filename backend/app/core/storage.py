@@ -1,8 +1,8 @@
-import os
 import uuid
 from pathlib import Path
 
 import aiofiles
+import aiofiles.os
 from fastapi import UploadFile
 
 from app.config import settings
@@ -36,20 +36,28 @@ def validate_mime_type(content_type: str) -> bool:
     return content_type in ALLOWED_MIME_TYPES
 
 
-async def save_file(content: bytes, filename: str) -> str:
-    """Save file to upload directory and return the relative path."""
-    upload_dir = _get_upload_dir()
+async def save_file(content: bytes, filename: str, subdirectory: str | None = None) -> str:
+    """Save raw bytes to the upload directory and return the stored relative path.
+
+    Returns ``"{subdirectory}/{unique_name}"`` when a subdirectory is given,
+    otherwise just ``"{unique_name}"``.
+    """
+    upload_dir = _get_upload_dir(subdirectory)
     unique_name = generate_unique_filename(filename)
     file_path = upload_dir / unique_name
 
     async with aiofiles.open(file_path, "wb") as f:
         await f.write(content)
 
-    return unique_name
+    return f"{subdirectory}/{unique_name}" if subdirectory else unique_name
 
 
 async def save_upload(upload_file: UploadFile, subdirectory: str | None = None) -> str:
-    """Save a FastAPI UploadFile and return the stored file path."""
+    """Save a FastAPI UploadFile and return the stored relative path.
+
+    Returns ``"{subdirectory}/{unique_name}"`` when a subdirectory is given,
+    otherwise just ``"{unique_name}"``.
+    """
     upload_dir = _get_upload_dir(subdirectory)
     unique_name = generate_unique_filename(upload_file.filename or "upload")
     file_path = upload_dir / unique_name
@@ -58,9 +66,7 @@ async def save_upload(upload_file: UploadFile, subdirectory: str | None = None) 
     async with aiofiles.open(file_path, "wb") as f:
         await f.write(content)
 
-    if subdirectory:
-        return f"{subdirectory}/{unique_name}"
-    return unique_name
+    return f"{subdirectory}/{unique_name}" if subdirectory else unique_name
 
 
 async def read_file(filename: str) -> bytes:
@@ -75,7 +81,7 @@ async def delete_file(filename: str) -> bool:
     """Delete file from upload directory. Returns True if deleted, False if not found."""
     file_path = _get_upload_dir() / filename
 
-    if file_path.exists():
-        os.remove(file_path)
+    if await aiofiles.os.path.exists(file_path):
+        await aiofiles.os.remove(file_path)
         return True
     return False

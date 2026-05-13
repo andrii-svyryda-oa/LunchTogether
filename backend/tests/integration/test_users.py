@@ -1,7 +1,6 @@
 """Integration tests for user management endpoints."""
 
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import UserRole
 

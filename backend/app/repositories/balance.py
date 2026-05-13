@@ -20,17 +20,6 @@ class BalanceRepository(BaseRepository[Balance]):
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_or_create(self, user_id: uuid.UUID, group_id: uuid.UUID) -> Balance:
-        balance = await self.get_by_user_and_group(user_id, group_id)
-        if balance is None:
-            balance = await self.create(
-                {
-                    "user_id": user_id,
-                    "group_id": group_id,
-                }
-            )
-        return balance
-
     async def get_balances_for_group(self, group_id: uuid.UUID) -> list[Balance]:
         query = select(Balance).where(Balance.group_id == group_id).options(joinedload(Balance.user))
         result = await self.session.execute(query)

@@ -3,12 +3,9 @@
 from decimal import Decimal
 
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import GroupRole, OrdersScope, PermissionType
+from app.models.enums import GroupRole
 from app.repositories.balance import BalanceHistoryRepository, BalanceRepository
-from tests.conftest import set_member_permission
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -81,8 +78,8 @@ class TestCreateOrder:
         resp = await ac.post(f"/api/groups/{group.id}/orders", json={"restaurant_name": "Brand New Place"})
         assert resp.status_code == 201
         # Verify the restaurant was auto-created
-        repo = RestaurantRepository(db)
         from sqlalchemy import select
+
         from app.models.restaurant import Restaurant
 
         result = await db.execute(
@@ -293,13 +290,14 @@ class TestFinishBalanceSideEffects:
         owner = await factory_user(email="debit_own@example.com")
         member = await factory_user(email="debit_mem@example.com")
         group = await factory_group(owner)
-        from app.repositories.group import GroupMemberRepository
-        from app.models.enums import GROUP_ROLE_PRESETS, GroupRole
-        from app.repositories.group import GroupMemberPermissionRepository
+        from app.core.permissions import GROUP_ROLE_PRESETS
+        from app.models.enums import GroupRole
+        from app.repositories.group import GroupMemberPermissionRepository, GroupMemberRepository
+        from app.schemas.internal import GroupMemberInternalCreate
 
         member_repo = GroupMemberRepository(db)
         perm_repo = GroupMemberPermissionRepository(db)
-        m = await member_repo.create({"user_id": member.id, "group_id": group.id})
+        m = await member_repo.create(GroupMemberInternalCreate(user_id=member.id, group_id=group.id))
         presets = GROUP_ROLE_PRESETS[GroupRole.MEMBER]
         await perm_repo.set_permissions(m.id, {pt.value: level for pt, level in presets.items()})
         await db.commit()
@@ -313,8 +311,8 @@ class TestFinishBalanceSideEffects:
 
         # Check balance was debited for owner
         bal_repo = BalanceRepository(db)
-        balance = await bal_repo.get_or_create(owner.id, group.id)
-        await db.refresh(balance)
+        balance = await bal_repo.get_by_user_and_group(owner.id, group.id)
+        assert balance is not None
         assert balance.amount == Decimal("-10.00")
 
         # Check history record
@@ -335,8 +333,8 @@ class TestFinishBalanceSideEffects:
         assert resp.status_code == 200
 
         # No balance record should exist
-        bal_repo = BalanceRepository(db)
         from sqlalchemy import select
+
         from app.models.balance import Balance
 
         result = await db.execute(

@@ -3,11 +3,8 @@
 from decimal import Decimal
 
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import GroupRole, OrderStatus
-from app.repositories.balance import BalanceRepository
-from app.repositories.order import OrderRepository
+from app.models.enums import GroupRole
 
 
 async def _transition(ac: AsyncClient, group_id, order_id, status: str):
@@ -143,8 +140,7 @@ class TestUserAnalytics:
         group = await factory_group(owner)
         ac = await auth_client(owner)
 
-        # Create a balance via adjust
-        target = owner  # adjust own balance (owner is editor of own group)
+        # Create a balance via adjust (adjust own balance — owner is editor of own group)
         await ac.post(
             f"/api/groups/{group.id}/balances/adjust",
             json={"user_id": str(owner.id), "amount": "25.00", "note": "topup"},

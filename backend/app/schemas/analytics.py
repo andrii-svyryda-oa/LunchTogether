@@ -3,7 +3,7 @@ from decimal import Decimal
 from app.schemas.base import BaseSchema
 
 
-class GroupAnalytics(BaseSchema):
+class GroupAnalyticsResponse(BaseSchema):
     total_orders: int = 0
     completed_orders: int = 0
     cancelled_orders: int = 0
@@ -15,7 +15,7 @@ class GroupAnalytics(BaseSchema):
     most_active_member: str | None = None
 
 
-class UserAnalytics(BaseSchema):
+class UserAnalyticsResponse(BaseSchema):
     total_groups: int = 0
     total_orders_participated: int = 0
     total_spent: Decimal = Decimal("0.00")

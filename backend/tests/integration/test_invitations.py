@@ -1,13 +1,9 @@
 """Integration tests for the invitation flow (§6.4.4 — 11 tests)."""
 
-from decimal import Decimal
 
-import pytest
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import GroupRole, UserRole
-from app.repositories.group import GroupMemberPermissionRepository, GroupMemberRepository
+from app.models.enums import GroupRole
 
 
 class TestCreateInvitation:

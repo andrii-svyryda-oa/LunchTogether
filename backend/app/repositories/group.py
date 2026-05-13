@@ -4,6 +4,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from app.models.enums import InvitationStatus
 from app.models.group import Group, GroupInvitation, GroupMember, GroupMemberPermission
 from app.repositories.base import BaseRepository
 
@@ -72,8 +73,8 @@ class GroupMemberRepository(BaseRepository[GroupMember]):
         return result.scalar_one()
 
     async def count_user_groups(self, user_id: uuid.UUID) -> int:
-        """Count how many groups a user is a member of (as owner)."""
-        query = select(func.count()).select_from(Group).where(Group.owner_id == user_id)
+        """Count how many groups a user is a member of."""
+        query = select(func.count()).select_from(GroupMember).where(GroupMember.user_id == user_id)
         result = await self.session.execute(query)
         return result.scalar_one()
 
@@ -90,42 +91,55 @@ class GroupMemberPermissionRepository(BaseRepository[GroupMemberPermission]):
     def __init__(self, session: AsyncSession):
         super().__init__(GroupMemberPermission, session)
 
+    async def get_for_member(self, group_member_id: uuid.UUID) -> list[GroupMemberPermission]:
+        query = select(GroupMemberPermission).where(GroupMemberPermission.group_member_id == group_member_id)
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def get_by_member_and_type(
+        self, group_member_id: uuid.UUID, permission_type: str
+    ) -> GroupMemberPermission | None:
+        query = select(GroupMemberPermission).where(
+            GroupMemberPermission.group_member_id == group_member_id,
+            GroupMemberPermission.permission_type == permission_type,
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def upsert_permission(
+        self, group_member_id: uuid.UUID, permission_type: str, level: str
+    ) -> GroupMemberPermission:
+        """Create or update a single permission entry for a group member."""
+        existing = await self.get_by_member_and_type(group_member_id, permission_type)
+        if existing:
+            existing.level = level
+            await self.session.flush()
+            await self.session.refresh(existing)
+            return existing
+        perm = GroupMemberPermission(
+            group_member_id=group_member_id,
+            permission_type=permission_type,
+            level=level,
+        )
+        self.session.add(perm)
+        await self.session.flush()
+        await self.session.refresh(perm)
+        return perm
+
     async def set_permissions(
         self,
         group_member_id: uuid.UUID,
         permissions: dict[str, str],
     ) -> list[GroupMemberPermission]:
-        """Set permissions for a group member. Creates or updates each permission type."""
-        result = []
-        for perm_type, level in permissions.items():
-            existing = await self.session.execute(
-                select(GroupMemberPermission).where(
-                    GroupMemberPermission.group_member_id == group_member_id,
-                    GroupMemberPermission.permission_type == perm_type,
-                )
-            )
-            existing_perm = existing.scalar_one_or_none()
-            if existing_perm:
-                existing_perm.level = level
-                await self.session.flush()
-                await self.session.refresh(existing_perm)
-                result.append(existing_perm)
-            else:
-                perm = GroupMemberPermission(
-                    group_member_id=group_member_id,
-                    permission_type=perm_type,
-                    level=level,
-                )
-                self.session.add(perm)
-                await self.session.flush()
-                await self.session.refresh(perm)
-                result.append(perm)
-        return result
+        """Upsert a full set of permissions for a group member.
 
-    async def get_for_member(self, group_member_id: uuid.UUID) -> list[GroupMemberPermission]:
-        query = select(GroupMemberPermission).where(GroupMemberPermission.group_member_id == group_member_id)
-        result = await self.session.execute(query)
-        return list(result.scalars().all())
+        The orchestration loop lives here temporarily; it will move to a
+        dedicated workflow in Phase 3.
+        """
+        return [
+            await self.upsert_permission(group_member_id, perm_type, level)
+            for perm_type, level in permissions.items()
+        ]
 
 
 class GroupInvitationRepository(BaseRepository[GroupInvitation]):
@@ -154,7 +168,7 @@ class GroupInvitationRepository(BaseRepository[GroupInvitation]):
         query = select(GroupInvitation).where(
             GroupInvitation.invitee_email == email,
             GroupInvitation.group_id == group_id,
-            GroupInvitation.status == "pending",
+            GroupInvitation.status == InvitationStatus.PENDING,
         )
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
@@ -164,7 +178,7 @@ class GroupInvitationRepository(BaseRepository[GroupInvitation]):
         query = (
             select(GroupInvitation)
             .where(
-                GroupInvitation.status == "pending",
+                GroupInvitation.status == InvitationStatus.PENDING,
                 or_(
                     GroupInvitation.invitee_id == user_id,
                     GroupInvitation.invitee_email == user_email,
@@ -186,7 +200,7 @@ class GroupInvitationRepository(BaseRepository[GroupInvitation]):
             .where(
                 GroupInvitation.invitee_email == user_email,
                 GroupInvitation.invitee_id.is_(None),
-                GroupInvitation.status == "pending",
+                GroupInvitation.status == InvitationStatus.PENDING,
             )
             .values(invitee_id=user_id)
         )
@@ -198,7 +212,7 @@ class GroupInvitationRepository(BaseRepository[GroupInvitation]):
             select(GroupInvitation)
             .where(
                 GroupInvitation.group_id == group_id,
-                GroupInvitation.status == "pending",
+                GroupInvitation.status == InvitationStatus.PENDING,
             )
             .options(joinedload(GroupInvitation.inviter))
             .order_by(GroupInvitation.created_at.desc())

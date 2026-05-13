@@ -3,7 +3,6 @@
 from decimal import Decimal
 
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import GroupRole
 from app.repositories.balance import BalanceRepository
@@ -89,8 +88,8 @@ class TestDeliveryFeeCalculation:
         await _transition(ac, group.id, order.id, "finished")
 
         bal_repo = BalanceRepository(db)
-        balance = await bal_repo.get_or_create(owner.id, group.id)
-        await db.refresh(balance)
+        balance = await bal_repo.get_by_user_and_group(owner.id, group.id)
+        assert balance is not None
         # 10.00 item + 2.00 delivery = 12.00 deducted
         assert balance.amount == Decimal("-12.00")
 

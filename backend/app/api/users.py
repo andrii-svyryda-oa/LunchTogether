@@ -2,14 +2,23 @@ import uuid
 
 from fastapi import APIRouter, Depends, Query
 
-from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
-from app.core.security import hash_password
-from app.dependencies import get_current_admin, get_current_user, get_user_repository
-from app.models.enums import UserRole
+from app.dependencies import (
+    get_admin_update_user_workflow,
+    get_create_user_workflow,
+    get_current_admin,
+    get_current_user,
+    get_get_user_workflow,
+    get_list_users_workflow,
+    get_update_user_workflow,
+)
 from app.models.user import User
-from app.repositories.user import UserRepository
 from app.schemas.base import PaginatedResponse
 from app.schemas.user import AdminUserCreate, AdminUserUpdate, UserResponse, UserUpdate
+from app.workflows.user.admin_update import AdminUpdateUserInput, AdminUpdateUserWorkflow
+from app.workflows.user.create import CreateUserInput, CreateUserWorkflow
+from app.workflows.user.get import GetUserInput, GetUserWorkflow
+from app.workflows.user.list import ListUsersInput, ListUsersWorkflow
+from app.workflows.user.update import UpdateUserInput, UpdateUserWorkflow
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -19,47 +28,30 @@ async def list_users(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: User = Depends(get_current_user),
-    user_repository: UserRepository = Depends(get_user_repository),
+    workflow: ListUsersWorkflow = Depends(get_list_users_workflow),
 ) -> PaginatedResponse[UserResponse]:
-    # Only admins can list all users
-    if current_user.role != UserRole.ADMIN:
-        raise ForbiddenError(detail="Admin access required to list all users")
-    result = await user_repository.get_multi(page=page, page_size=page_size)
-    result.items = [UserResponse.model_validate(user) for user in result.items]
-    return result
+    result = await workflow.execute(ListUsersInput(page=page, page_size=page_size, current_user=current_user))
+    return result.result
 
 
 @router.post("", response_model=UserResponse, status_code=201)
 async def create_user(
     data: AdminUserCreate,
     _current_user: User = Depends(get_current_admin),
-    user_repository: UserRepository = Depends(get_user_repository),
+    workflow: CreateUserWorkflow = Depends(get_create_user_workflow),
 ) -> UserResponse:
-    """Admin-only: create a new user."""
-    if await user_repository.exists_by_email(data.email):
-        raise ConflictError(detail="User with this email already exists")
-
-    user = await user_repository.create(
-        {
-            "email": data.email,
-            "hashed_password": hash_password(data.password),
-            "full_name": data.full_name,
-            "role": data.role,
-        }
-    )
-    return UserResponse.model_validate(user)
+    result = await workflow.execute(CreateUserInput(data=data))
+    return result.user
 
 
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: uuid.UUID,
     _current_user: User = Depends(get_current_user),
-    user_repository: UserRepository = Depends(get_user_repository),
+    workflow: GetUserWorkflow = Depends(get_get_user_workflow),
 ) -> UserResponse:
-    user = await user_repository.get_by_id(user_id)
-    if user is None:
-        raise NotFoundError(detail="User not found")
-    return UserResponse.model_validate(user)
+    result = await workflow.execute(GetUserInput(user_id=user_id))
+    return result.user
 
 
 @router.patch("/{user_id}", response_model=UserResponse)
@@ -67,23 +59,10 @@ async def update_user(
     user_id: uuid.UUID,
     data: UserUpdate,
     current_user: User = Depends(get_current_user),
-    user_repository: UserRepository = Depends(get_user_repository),
+    workflow: UpdateUserWorkflow = Depends(get_update_user_workflow),
 ) -> UserResponse:
-    # Users can only update their own profile (admins can update anyone)
-    if current_user.id != user_id and current_user.role != UserRole.ADMIN:
-        raise ForbiddenError(detail="You can only update your own profile")
-
-    update_data = data.model_dump(exclude_unset=True)
-    if not update_data:
-        target = await user_repository.get_by_id(user_id)
-        if target is None:
-            raise NotFoundError(detail="User not found")
-        return UserResponse.model_validate(target)
-
-    user = await user_repository.update(user_id, update_data)
-    if user is None:
-        raise NotFoundError(detail="User not found")
-    return UserResponse.model_validate(user)
+    result = await workflow.execute(UpdateUserInput(user_id=user_id, data=data, current_user=current_user))
+    return result.user
 
 
 @router.put("/{user_id}/admin", response_model=UserResponse)
@@ -91,17 +70,7 @@ async def admin_update_user(
     user_id: uuid.UUID,
     data: AdminUserUpdate,
     _current_user: User = Depends(get_current_admin),
-    user_repository: UserRepository = Depends(get_user_repository),
+    workflow: AdminUpdateUserWorkflow = Depends(get_admin_update_user_workflow),
 ) -> UserResponse:
-    """Admin-only: update any user's details including role."""
-    update_data = data.model_dump(exclude_unset=True)
-    if not update_data:
-        user = await user_repository.get_by_id(user_id)
-        if user is None:
-            raise NotFoundError(detail="User not found")
-        return UserResponse.model_validate(user)
-
-    user = await user_repository.update(user_id, update_data)
-    if user is None:
-        raise NotFoundError(detail="User not found")
-    return UserResponse.model_validate(user)
+    result = await workflow.execute(AdminUpdateUserInput(user_id=user_id, data=data))
+    return result.user

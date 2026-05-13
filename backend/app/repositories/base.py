@@ -1,6 +1,7 @@
 import uuid
 from typing import Any, Generic, TypeVar
 
+from pydantic import BaseModel as PydanticBaseModel
 from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -61,21 +62,20 @@ class BaseRepository(Generic[ModelType]):
             total_pages=total_pages,
         )
 
-    async def create(self, data: dict[str, Any]) -> ModelType:
-        instance = self.model(**data)
+    async def create(self, data: PydanticBaseModel) -> ModelType:
+        instance = self.model(**data.model_dump())
         self.session.add(instance)
         await self.session.flush()
         await self.session.refresh(instance)
         return instance
 
-    async def update(self, entity_id: uuid.UUID, data: dict[str, Any]) -> ModelType | None:
+    async def update(self, entity_id: uuid.UUID, data: PydanticBaseModel) -> ModelType | None:
         instance = await self.get_by_id(entity_id)
         if instance is None:
             return None
 
-        for key, value in data.items():
-            if value is not None:
-                setattr(instance, key, value)
+        for key, value in data.model_dump(exclude_unset=True).items():
+            setattr(instance, key, value)
 
         await self.session.flush()
         await self.session.refresh(instance)

@@ -1,10 +1,8 @@
 """Integration tests for restaurants and dishes (§6.4.6 — 6 tests)."""
 
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import GroupRole, RestaurantsScope, PermissionType
-from tests.conftest import set_member_permission
+from app.models.enums import GroupRole
 
 
 class TestRestaurantCRUD:

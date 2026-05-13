@@ -3,7 +3,7 @@ from datetime import datetime
 
 from pydantic import Field
 
-from app.models.enums import GroupRole, PermissionType
+from app.models.enums import GroupRole, InvitationStatus, PermissionType
 from app.schemas.base import BaseSchema
 
 # --- Group ---
@@ -38,11 +38,11 @@ class GroupDetailResponse(GroupResponse):
 
 
 class PermissionResponse(BaseSchema):
-    permission_type: str
+    permission_type: PermissionType
     level: str
 
 
-class PermissionInput(BaseSchema):
+class PermissionCreate(BaseSchema):
     permission_type: PermissionType
     level: str
 
@@ -54,13 +54,13 @@ class GroupMemberCreate(BaseSchema):
     user_id: uuid.UUID
     role: GroupRole = GroupRole.MEMBER
     # Optional permission overrides after role preset
-    permissions: list[PermissionInput] | None = None
+    permissions: list[PermissionCreate] | None = None
 
 
 class GroupMemberUpdate(BaseSchema):
     role: GroupRole | None = None
     # Optional permission overrides after role preset
-    permissions: list[PermissionInput] | None = None
+    permissions: list[PermissionCreate] | None = None
 
 
 class GroupMemberResponse(BaseSchema):
@@ -88,7 +88,7 @@ class InvitationResponse(BaseSchema):
     inviter_id: uuid.UUID
     invitee_email: str
     invitee_id: uuid.UUID | None
-    status: str
+    status: InvitationStatus
     token: str
     created_at: datetime
     updated_at: datetime
@@ -122,6 +122,6 @@ class MyInvitationResponse(BaseSchema):
     group_logo_path: str | None
     inviter_full_name: str | None
     invitee_email: str
-    status: str
+    status: InvitationStatus
     token: str
     created_at: datetime

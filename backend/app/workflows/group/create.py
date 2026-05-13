@@ -1,18 +1,19 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.core.exceptions import ForbiddenError
-from app.models.enums import GROUP_ROLE_PRESETS, GroupRole
+from app.core.permissions import GROUP_ROLE_PRESETS
+from app.models.enums import GroupRole
 from app.models.user import User
 from app.repositories.group import GroupMemberPermissionRepository, GroupMemberRepository, GroupRepository
 from app.schemas.group import GroupCreate, GroupResponse
+from app.schemas.internal import GroupInternalCreate, GroupMemberInternalCreate
 
 
 class CreateGroupInput(BaseModel):
-    data: GroupCreate
-    current_user: object  # User model
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    class Config:
-        arbitrary_types_allowed = True
+    data: GroupCreate
+    current_user: User
 
 
 class CreateGroupOutput(BaseModel):
@@ -34,7 +35,7 @@ class CreateGroupWorkflow:
         self.permission_repository = permission_repository
 
     async def execute(self, input_data: CreateGroupInput) -> CreateGroupOutput:
-        user: User = input_data.current_user  # type: ignore[assignment]
+        user = input_data.current_user
 
         # Check group limit (admins bypass)
         if not user.is_admin:
@@ -44,19 +45,16 @@ class CreateGroupWorkflow:
 
         # Create the group
         group = await self.group_repository.create(
-            {
-                "name": input_data.data.name,
-                "description": input_data.data.description,
-                "owner_id": user.id,
-            }
+            GroupInternalCreate(
+                name=input_data.data.name,
+                description=input_data.data.description,
+                owner_id=user.id,
+            )
         )
 
         # Add the creator as a member with Admin role
         member = await self.group_member_repository.create(
-            {
-                "user_id": user.id,
-                "group_id": group.id,
-            }
+            GroupMemberInternalCreate(user_id=user.id, group_id=group.id)
         )
 
         # Set Admin role permissions

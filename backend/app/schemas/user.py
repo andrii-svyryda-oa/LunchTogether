@@ -22,7 +22,7 @@ class AdminUserCreate(BaseSchema):
     role: UserRole = UserRole.USER
 
 
-class UserLogin(BaseSchema):
+class UserLoginRequest(BaseSchema):
     email: EmailStr
     password: str
 
@@ -49,11 +49,7 @@ class UserResponse(BaseSchema):
     full_name: str
     is_active: bool
     is_verified: bool
-    role: str
+    role: UserRole
     navigate_to_active_order: bool
     created_at: datetime
     updated_at: datetime
-
-
-class UserInDB(UserResponse):
-    hashed_password: str

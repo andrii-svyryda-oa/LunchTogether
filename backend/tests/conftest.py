@@ -16,7 +16,6 @@ from decimal import Decimal
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
 # ---------------------------------------------------------------------------
@@ -39,19 +38,15 @@ TEST_DB_URL = os.environ["TEST_DATABASE_URL"]
 # Point the main DATABASE_URL setting at the test DB so the app engine uses it.
 os.environ["DATABASE_URL"] = TEST_DB_URL
 
-from app.core.security import create_access_token, hash_password  # noqa: E402
+from app.core.permissions import GROUP_ROLE_PRESETS  # noqa: E402
+from app.core.security import hash_password  # noqa: E402
 from app.database import get_db  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Base, Group, Order, Restaurant, User  # noqa: E402
 from app.models.enums import (  # noqa: E402
-    GROUP_ROLE_PRESETS,
-    AnalyticsScope,
-    BalancesScope,
     GroupRole,
-    MembersScope,
-    OrdersScope,
+    OrderStatus,  # noqa: E402
     PermissionType,
-    RestaurantsScope,
     UserRole,
 )
 from app.repositories.group import (  # noqa: E402
@@ -62,8 +57,14 @@ from app.repositories.group import (  # noqa: E402
 from app.repositories.order import OrderItemRepository, OrderRepository  # noqa: E402
 from app.repositories.restaurant import RestaurantRepository  # noqa: E402
 from app.repositories.user import UserRepository  # noqa: E402
+from app.schemas.internal import (  # noqa: E402
+    GroupMemberInternalCreate,
+    OrderInternalCreate,
+    OrderItemInternalCreate,
+    RestaurantInternalCreate,
+    UserInternalCreate,
+)
 from app.workflows.group.create import CreateGroupInput, CreateGroupWorkflow  # noqa: E402
-
 
 # ---------------------------------------------------------------------------
 # Per-test engine, schema, and session
@@ -125,13 +126,13 @@ async def _make_user(
 ) -> User:
     repo = UserRepository(db)
     user = await repo.create(
-        {
-            "email": email,
-            "hashed_password": hash_password(password),
-            "full_name": full_name,
-            "role": role,
-            "is_active": is_active,
-        }
+        UserInternalCreate(
+            email=email,
+            hashed_password=hash_password(password),
+            full_name=full_name,
+            role=role,
+            is_active=is_active,
+        )
     )
     await db.commit()
     await db.refresh(user)
@@ -182,7 +183,7 @@ def factory_group_with_members(db: AsyncSession, factory_group, factory_user):
         member_repo = GroupMemberRepository(db)
         perm_repo = GroupMemberPermissionRepository(db)
         for user, role in members:
-            member = await member_repo.create({"user_id": user.id, "group_id": group.id})
+            member = await member_repo.create(GroupMemberInternalCreate(user_id=user.id, group_id=group.id))
             presets = GROUP_ROLE_PRESETS[role]
             await perm_repo.set_permissions(member.id, {pt.value: level for pt, level in presets.items()})
         await db.commit()
@@ -197,7 +198,7 @@ def factory_restaurant(db: AsyncSession):
 
     async def _factory(group: Group, name: str = "Test Restaurant") -> Restaurant:
         repo = RestaurantRepository(db)
-        restaurant = await repo.create({"name": name, "group_id": group.id})
+        restaurant = await repo.create(RestaurantInternalCreate(name=name, group_id=group.id))
         await db.commit()
         return restaurant
 
@@ -220,24 +221,24 @@ def factory_order(db: AsyncSession):
         order_repo = OrderRepository(db)
         item_repo = OrderItemRepository(db)
         order = await order_repo.create(
-            {
-                "group_id": group.id,
-                "initiator_id": initiator.id,
-                "restaurant_id": restaurant.id if restaurant else None,
-                "restaurant_name": restaurant.name if restaurant else None,
-                "status": "initiated",
-            }
+            OrderInternalCreate(
+                group_id=group.id,
+                initiator_id=initiator.id,
+                restaurant_id=restaurant.id if restaurant else None,
+                restaurant_name=restaurant.name if restaurant else None,
+                status=OrderStatus.INITIATED,
+            )
         )
         if items:
             for user, name, price in items:
                 await item_repo.create(
-                    {
-                        "order_id": order.id,
-                        "user_id": user.id,
-                        "name": name,
-                        "price": price,
-                        "quantity": 1,
-                    }
+                    OrderItemInternalCreate(
+                        order_id=order.id,
+                        user_id=user.id,
+                        name=name,
+                        price=price,
+                        quantity=1,
+                    )
                 )
         await db.commit()
         await db.refresh(order)

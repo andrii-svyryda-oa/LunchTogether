@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Response
 
 from app.dependencies import get_current_user, get_login_workflow, get_register_workflow
 from app.models.user import User
-from app.schemas.user import UserCreate, UserLogin, UserResponse
+from app.schemas.user import UserCreate, UserLoginRequest, UserResponse
 from app.workflows.user.login import LoginInput, LoginWorkflow
 from app.workflows.user.register import RegisterInput, RegisterWorkflow
 
@@ -20,7 +20,7 @@ async def register(
 
 @router.post("/login", response_model=UserResponse)
 async def login(
-    data: UserLogin,
+    data: UserLoginRequest,
     response: Response,
     workflow: LoginWorkflow = Depends(get_login_workflow),
 ) -> UserResponse:

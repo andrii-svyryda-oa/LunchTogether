@@ -1,6 +1,6 @@
 import uuid
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.core.exceptions import ForbiddenError, NotFoundError
 from app.models.enums import OrdersScope, OrderStatus, PermissionType
@@ -8,16 +8,16 @@ from app.models.user import User
 from app.repositories.group import GroupMemberRepository, GroupRepository
 from app.repositories.order import OrderRepository
 from app.repositories.restaurant import RestaurantRepository
+from app.schemas.internal import OrderInternalCreate, RestaurantInternalCreate
 from app.schemas.order import OrderCreate, OrderResponse
 
 
 class CreateOrderInput(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     group_id: uuid.UUID
     data: OrderCreate
-    current_user: object
-
-    class Config:
-        arbitrary_types_allowed = True
+    current_user: User
 
 
 class CreateOrderOutput(BaseModel):
@@ -38,7 +38,7 @@ class CreateOrderWorkflow:
         self.restaurant_repository = restaurant_repository
 
     async def execute(self, input_data: CreateOrderInput) -> CreateOrderOutput:
-        user: User = input_data.current_user  # type: ignore[assignment]
+        user = input_data.current_user
 
         # Verify group exists
         group = await self.group_repository.get_by_id(input_data.group_id)
@@ -75,21 +75,18 @@ class CreateOrderWorkflow:
                 restaurant_id = existing.id
             else:
                 new_restaurant = await self.restaurant_repository.create(
-                    {
-                        "name": restaurant_name,
-                        "group_id": input_data.group_id,
-                    }
+                    RestaurantInternalCreate(name=restaurant_name, group_id=input_data.group_id)
                 )
                 restaurant_id = new_restaurant.id
 
         order = await self.order_repository.create(
-            {
-                "group_id": input_data.group_id,
-                "restaurant_id": restaurant_id,
-                "restaurant_name": restaurant_name,
-                "initiator_id": user.id,
-                "status": OrderStatus.INITIATED,
-            }
+            OrderInternalCreate(
+                group_id=input_data.group_id,
+                restaurant_id=restaurant_id,
+                restaurant_name=restaurant_name,
+                initiator_id=user.id,
+                status=OrderStatus.INITIATED,
+            )
         )
 
         return CreateOrderOutput(order=OrderResponse.model_validate(order))
