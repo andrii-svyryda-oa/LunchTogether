@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -159,12 +159,16 @@ class GroupInvitationRepository(BaseRepository[GroupInvitation]):
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_pending_for_user(self, user_id: uuid.UUID) -> list[GroupInvitation]:
+    async def get_pending_for_user(self, user_id: uuid.UUID, user_email: str) -> list[GroupInvitation]:
+        """Return pending invitations for a user, matching by id OR by email (for pre-account invites)."""
         query = (
             select(GroupInvitation)
             .where(
-                GroupInvitation.invitee_id == user_id,
                 GroupInvitation.status == "pending",
+                or_(
+                    GroupInvitation.invitee_id == user_id,
+                    GroupInvitation.invitee_email == user_email,
+                ),
             )
             .options(
                 joinedload(GroupInvitation.group),
@@ -174,6 +178,20 @@ class GroupInvitationRepository(BaseRepository[GroupInvitation]):
         )
         result = await self.session.execute(query)
         return list(result.unique().scalars().all())
+
+    async def link_invitations_to_user(self, user_id: uuid.UUID, user_email: str) -> None:
+        """Back-fill invitee_id on any existing pending invitations that match the email."""
+        stmt = (
+            update(GroupInvitation)
+            .where(
+                GroupInvitation.invitee_email == user_email,
+                GroupInvitation.invitee_id.is_(None),
+                GroupInvitation.status == "pending",
+            )
+            .values(invitee_id=user_id)
+        )
+        await self.session.execute(stmt)
+        await self.session.flush()
 
     async def get_pending_for_group(self, group_id: uuid.UUID) -> list[GroupInvitation]:
         query = (

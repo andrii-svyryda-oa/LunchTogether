@@ -238,7 +238,7 @@ class InviteWorkflow:
 
     async def list_my_pending(self, user: User) -> list[MyInvitationResponse]:
         """Returns all pending invitations addressed to the current user."""
-        invitations = await self.invitation_repository.get_pending_for_user(user.id)
+        invitations = await self.invitation_repository.get_pending_for_user(user.id, user.email)
         result = []
         for inv in invitations:
             group = getattr(inv, "group", None)

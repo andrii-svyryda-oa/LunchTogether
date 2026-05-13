@@ -91,8 +91,9 @@ def get_email_service() -> EmailService:
 
 def get_register_workflow(
     user_repository: UserRepository = Depends(get_user_repository),
+    invitation_repository: GroupInvitationRepository = Depends(get_group_invitation_repository),
 ) -> RegisterWorkflow:
-    return RegisterWorkflow(user_repository)
+    return RegisterWorkflow(user_repository, invitation_repository)
 
 
 def get_login_workflow(
