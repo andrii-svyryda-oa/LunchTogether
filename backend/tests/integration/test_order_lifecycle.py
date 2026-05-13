@@ -70,7 +70,6 @@ class TestCreateOrder:
     async def test_restaurant_by_name_auto_creates(
         self, client: AsyncClient, factory_user, factory_group, auth_client, db
     ):
-        from app.repositories.restaurant import RestaurantRepository
 
         owner = await factory_user(email="autorest_own@example.com")
         group = await factory_group(owner)

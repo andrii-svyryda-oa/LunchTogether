@@ -52,6 +52,8 @@ known-first-party = ["app"]
 "alembic/versions/*.py" = ["E501"]
 # Email HTML templates contain long inline markup strings.
 "app/core/email.py" = ["E501"]
+# Test function signatures with many fixtures routinely exceed the line limit.
+"tests/**/*.py" = ["E501"]
 
 [dependency-groups]
 dev = [
