@@ -126,6 +126,20 @@ export const groupApi = baseApi.injectEndpoints({
     }),
 
     // Invitations
+    getGroupInvitations: builder.query<GroupInvitation[], string>({
+      query: (groupId) => API_ENDPOINTS.GROUPS.INVITATIONS(groupId),
+      providesTags: (result, _error, groupId) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({
+                type: "GroupInvitation" as const,
+                id,
+              })),
+              { type: "GroupInvitation" as const, id: `LIST-${groupId}` },
+            ]
+          : [{ type: "GroupInvitation" as const, id: `LIST-${groupId}` }],
+    }),
+
     createInvitation: builder.mutation<
       GroupInvitation,
       { groupId: string; data: InvitationCreateRequest }
@@ -135,6 +149,23 @@ export const groupApi = baseApi.injectEndpoints({
         method: "POST",
         body: data,
       }),
+      invalidatesTags: (_result, _error, { groupId }) => [
+        { type: "GroupInvitation" as const, id: `LIST-${groupId}` },
+      ],
+    }),
+
+    cancelInvitation: builder.mutation<
+      MessageResponse,
+      { groupId: string; invitationId: string }
+    >({
+      query: ({ groupId, invitationId }) => ({
+        url: API_ENDPOINTS.GROUPS.INVITATION_DETAIL(groupId, invitationId),
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, { groupId, invitationId }) => [
+        { type: "GroupInvitation" as const, id: invitationId },
+        { type: "GroupInvitation" as const, id: `LIST-${groupId}` },
+      ],
     }),
 
     acceptInvitation: builder.mutation<MessageResponse, string>({
@@ -164,7 +195,9 @@ export const {
   useAddGroupMemberMutation,
   useUpdateGroupMemberMutation,
   useRemoveGroupMemberMutation,
+  useGetGroupInvitationsQuery,
   useCreateInvitationMutation,
+  useCancelInvitationMutation,
   useAcceptInvitationMutation,
   useDeclineInvitationMutation,
 } = groupApi;

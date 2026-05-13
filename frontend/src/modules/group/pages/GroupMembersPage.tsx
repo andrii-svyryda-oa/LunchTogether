@@ -13,14 +13,25 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks";
 import {
+  useCancelInvitationMutation,
   useCreateInvitationMutation,
+  useGetGroupInvitationsQuery,
   useGetGroupMembersQuery,
   useGetGroupQuery,
   useRemoveGroupMemberMutation,
   useUpdateGroupMemberMutation,
 } from "@/store/api/groupApi";
 import { GROUP_ROLES } from "@/types";
-import { AlertCircle, Loader2, Plus, UserMinus, Users } from "lucide-react";
+import { formatDate } from "@/utils";
+import {
+  AlertCircle,
+  Loader2,
+  Mail,
+  Plus,
+  UserMinus,
+  Users,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 
@@ -34,7 +45,13 @@ export function GroupMembersPage() {
   const { user } = useAuth();
   const { data: group } = useGetGroupQuery(groupId!);
   const { data: members, isLoading } = useGetGroupMembersQuery(groupId!);
+  const { data: pendingInvitations } = useGetGroupInvitationsQuery(groupId!);
   const [invite, { isLoading: isInviting }] = useCreateInvitationMutation();
+  const [cancelInvitation, { isLoading: isCancellingInvite }] =
+    useCancelInvitationMutation();
+  const [cancellingInvitationId, setCancellingInvitationId] = useState<
+    string | null
+  >(null);
   const [removeMember] = useRemoveGroupMemberMutation();
   const [updateMember] = useUpdateGroupMemberMutation();
 
@@ -76,6 +93,18 @@ export function GroupMembersPage() {
 
   const handleRoleChange = async (userId: string, role: string) => {
     await updateMember({ groupId: groupId!, userId, data: { role } });
+  };
+
+  const handleCancelInvitation = async (invitationId: string) => {
+    if (!confirm("Cancel this pending invitation?")) return;
+    setCancellingInvitationId(invitationId);
+    try {
+      await cancelInvitation({ groupId: groupId!, invitationId }).unwrap();
+    } catch {
+      // Silently ignore; invitation list will refresh on next load.
+    } finally {
+      setCancellingInvitationId(null);
+    }
   };
 
   if (isLoading) {
@@ -227,6 +256,75 @@ export function GroupMembersPage() {
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {pendingInvitations && pendingInvitations.length > 0 && (
+        <div className="mt-10">
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="text-lg font-semibold tracking-tight">
+              Pending Invitations
+            </h2>
+            <span className="text-[11px] font-medium bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">
+              {pendingInvitations.length}
+            </span>
+          </div>
+          <div className="space-y-3">
+            {pendingInvitations.map((invitation) => {
+              const canCancel =
+                isOwner ||
+                user?.role === "admin" ||
+                invitation.inviter_id === user?.id;
+              const isThisInviteCancelling =
+                isCancellingInvite &&
+                cancellingInvitationId === invitation.id;
+              return (
+                <Card key={invitation.id} className="p-4 hover:shadow-md">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-700 shrink-0">
+                        <Mail className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium truncate">
+                            {invitation.invitee_email}
+                          </p>
+                          <span className="text-[11px] font-medium bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">
+                            Pending
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">
+                          Invited by{" "}
+                          {invitation.inviter_id === user?.id
+                            ? "you"
+                            : invitation.inviter_full_name ?? "a member"}
+                          {" · "}
+                          {formatDate(invitation.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                    {canCancel && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleCancelInvitation(invitation.id)}
+                        disabled={isThisInviteCancelling}
+                        className="text-muted-foreground hover:text-destructive shrink-0"
+                        title="Cancel invitation"
+                      >
+                        {isThisInviteCancelling ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <X className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

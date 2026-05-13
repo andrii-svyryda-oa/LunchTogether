@@ -92,6 +92,8 @@ class InvitationResponse(BaseSchema):
     token: str
     created_at: datetime
     updated_at: datetime
+    inviter_full_name: str | None = None
+    inviter_email: str | None = None
 
 
 class InvitationAcceptResponse(BaseSchema):

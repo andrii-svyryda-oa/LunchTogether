@@ -55,6 +55,8 @@ export interface GroupInvitation {
   token: string;
   created_at: string;
   updated_at: string;
+  inviter_full_name?: string | null;
+  inviter_email?: string | null;
 }
 
 // --- Restaurants ---

@@ -29,7 +29,13 @@ from app.schemas.group import (
     PermissionResponse,
 )
 from app.workflows.group.create import CreateGroupInput, CreateGroupWorkflow
-from app.workflows.group.invite import AcceptInviteInput, InviteInput, InviteWorkflow
+from app.workflows.group.invite import (
+    AcceptInviteInput,
+    CancelInvitationInput,
+    InviteInput,
+    InviteWorkflow,
+    ListInvitationsInput,
+)
 from app.workflows.group.manage_members import (
     AddMemberInput,
     ManageMembersWorkflow,
@@ -243,6 +249,19 @@ async def remove_member(
 # --- Invitations ---
 
 
+@router.get("/{group_id}/invitations", response_model=list[InvitationResponse])
+async def list_pending_invitations(
+    group_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    workflow: InviteWorkflow = Depends(get_invite_workflow),
+) -> list[InvitationResponse]:
+    """List pending invitations for a group."""
+    result = await workflow.list_pending_invitations(
+        ListInvitationsInput(group_id=group_id, current_user=current_user)
+    )
+    return result.invitations
+
+
 @router.post("/{group_id}/invitations", response_model=InvitationResponse, status_code=201)
 async def create_invitation(
     group_id: uuid.UUID,
@@ -252,6 +271,19 @@ async def create_invitation(
 ) -> InvitationResponse:
     result = await workflow.create_invitation(InviteInput(group_id=group_id, data=data, current_user=current_user))
     return result.invitation
+
+
+@router.delete("/{group_id}/invitations/{invitation_id}", response_model=MessageResponse)
+async def cancel_invitation(
+    group_id: uuid.UUID,
+    invitation_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    workflow: InviteWorkflow = Depends(get_invite_workflow),
+) -> MessageResponse:
+    await workflow.cancel_invitation(
+        CancelInvitationInput(group_id=group_id, invitation_id=invitation_id, current_user=current_user)
+    )
+    return MessageResponse(message="Invitation cancelled")
 
 
 @router.post("/invitations/{token}/accept", response_model=MessageResponse)

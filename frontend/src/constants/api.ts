@@ -18,6 +18,8 @@ export const API_ENDPOINTS = {
     MEMBER_DETAIL: (groupId: string, userId: string) =>
       `/groups/${groupId}/members/${userId}`,
     INVITATIONS: (groupId: string) => `/groups/${groupId}/invitations`,
+    INVITATION_DETAIL: (groupId: string, invitationId: string) =>
+      `/groups/${groupId}/invitations/${invitationId}`,
     ACCEPT_INVITATION: (token: string) => `/groups/invitations/${token}/accept`,
     DECLINE_INVITATION: (token: string) =>
       `/groups/invitations/${token}/decline`,
@@ -65,6 +67,7 @@ export const API_TAG_TYPES = {
   USER: "User",
   GROUP: "Group",
   GROUP_MEMBER: "GroupMember",
+  GROUP_INVITATION: "GroupInvitation",
   RESTAURANT: "Restaurant",
   DISH: "Dish",
   ORDER: "Order",

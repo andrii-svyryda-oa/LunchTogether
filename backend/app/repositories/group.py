@@ -157,3 +157,16 @@ class GroupInvitationRepository(BaseRepository[GroupInvitation]):
         )
         result = await self.session.execute(query)
         return list(result.unique().scalars().all())
+
+    async def get_pending_for_group(self, group_id: uuid.UUID) -> list[GroupInvitation]:
+        query = (
+            select(GroupInvitation)
+            .where(
+                GroupInvitation.group_id == group_id,
+                GroupInvitation.status == "pending",
+            )
+            .options(joinedload(GroupInvitation.inviter))
+            .order_by(GroupInvitation.created_at.desc())
+        )
+        result = await self.session.execute(query)
+        return list(result.unique().scalars().all())

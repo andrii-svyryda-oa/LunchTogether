@@ -89,7 +89,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 EOF
 
 # Create application directory and clone repo
-echo "11. Creating application directories and cloning repository..."
+echo "11. Creating application directories..."
 sudo mkdir -p "$(dirname "$APP_DIR")"
 sudo chown "$APP_USER":www-data "$(dirname "$APP_DIR")"
 
