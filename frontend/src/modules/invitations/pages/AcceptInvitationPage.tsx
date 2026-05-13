@@ -16,6 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { APP, ROUTES } from "@/constants";
 import { useAuth } from "@/hooks";
 import { useGetInvitationByTokenQuery } from "@/store/api/groupApi";
@@ -253,7 +254,7 @@ function RegisterAndJoinCard({ preview }: PreviewProps) {
 
               {/* Email is locked to the invitee address */}
               <div className="space-y-2">
-                <FormLabel>Email</FormLabel>
+                <Label>Email</Label>
                 <Input
                   value={preview.invitee_email}
                   readOnly
