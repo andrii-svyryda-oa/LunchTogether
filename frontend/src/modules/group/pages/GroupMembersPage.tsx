@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks";
 import {
   useCreateInvitationMutation,
@@ -19,7 +20,7 @@ import {
   useUpdateGroupMemberMutation,
 } from "@/store/api/groupApi";
 import { GROUP_ROLES } from "@/types";
-import { Plus, UserMinus, Users } from "lucide-react";
+import { AlertCircle, Loader2, Plus, UserMinus, Users } from "lucide-react";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 
@@ -33,15 +34,29 @@ export function GroupMembersPage() {
   const { user } = useAuth();
   const { data: group } = useGetGroupQuery(groupId!);
   const { data: members, isLoading } = useGetGroupMembersQuery(groupId!);
-  const [invite] = useCreateInvitationMutation();
+  const [invite, { isLoading: isInviting }] = useCreateInvitationMutation();
   const [removeMember] = useRemoveGroupMemberMutation();
   const [updateMember] = useUpdateGroupMemberMutation();
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
+  const [inviteError, setInviteError] = useState<string | null>(null);
+
+  const getErrorMessage = (error: unknown): string => {
+    const err = error as { data?: { detail?: string } };
+    return err?.data?.detail ?? "Failed to send invitation. Please try again.";
+  };
+
+  const handleInviteDialogChange = (open: boolean) => {
+    setInviteOpen(open);
+    if (!open) {
+      setInviteError(null);
+    }
+  };
 
   const handleInvite = async () => {
+    setInviteError(null);
     try {
       await invite({
         groupId: groupId!,
@@ -49,8 +64,8 @@ export function GroupMembersPage() {
       }).unwrap();
       setInviteOpen(false);
       setInviteEmail("");
-    } catch {
-      // Error handled
+    } catch (error: unknown) {
+      setInviteError(getErrorMessage(error));
     }
   };
 
@@ -82,7 +97,7 @@ export function GroupMembersPage() {
             {members?.length ?? 0} members in this group
           </p>
         </div>
-        <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <Dialog open={inviteOpen} onOpenChange={handleInviteDialogChange}>
           <DialogTrigger asChild>
             <Button className="shadow-md shadow-primary/20">
               <Plus className="mr-2 h-4 w-4" />
@@ -98,7 +113,12 @@ export function GroupMembersPage() {
                 <Label>Email</Label>
                 <Input
                   value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
+                  onChange={(e) => {
+                    setInviteEmail(e.target.value);
+                    if (inviteError) {
+                      setInviteError(null);
+                    }
+                  }}
                   placeholder="colleague@example.com"
                 />
               </div>
@@ -112,11 +132,18 @@ export function GroupMembersPage() {
                   searchPlaceholder="Search roles..."
                 />
               </div>
+              {inviteError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{inviteError}</AlertDescription>
+                </Alert>
+              )}
               <Button
                 onClick={handleInvite}
-                disabled={!inviteEmail.trim()}
+                disabled={!inviteEmail.trim() || isInviting}
                 className="w-full"
               >
+                {isInviting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Send Invitation
               </Button>
             </div>
