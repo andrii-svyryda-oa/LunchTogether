@@ -99,3 +99,29 @@ class InvitationResponse(BaseSchema):
 class InvitationAcceptResponse(BaseSchema):
     message: str
     group_id: uuid.UUID
+
+
+class InvitationPreviewResponse(BaseSchema):
+    """Public preview of an invitation — no auth required to fetch this."""
+
+    group_id: uuid.UUID
+    group_name: str
+    group_logo_path: str | None
+    inviter_full_name: str
+    inviter_email: str
+    invitee_email: str
+    invitee_has_account: bool
+
+
+class MyInvitationResponse(BaseSchema):
+    """A pending invitation shown in the current user's own inbox."""
+
+    id: uuid.UUID
+    group_id: uuid.UUID
+    group_name: str
+    group_logo_path: str | None
+    inviter_full_name: str | None
+    invitee_email: str
+    status: str
+    token: str
+    created_at: datetime

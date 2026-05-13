@@ -16,7 +16,13 @@ from app.repositories.group import (
     GroupRepository,
 )
 from app.repositories.user import UserRepository
-from app.schemas.group import InvitationAcceptResponse, InvitationCreate, InvitationResponse
+from app.schemas.group import (
+    InvitationAcceptResponse,
+    InvitationCreate,
+    InvitationPreviewResponse,
+    InvitationResponse,
+    MyInvitationResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +213,50 @@ class InviteWorkflow:
         if invitation.status != InvitationStatus.PENDING:
             raise ForbiddenError(detail="Invitation is no longer valid")
 
+        if invitation.invitee_email != user.email:
+            raise ForbiddenError(detail="This invitation is not for your email address")
+
         await self.invitation_repository.update(invitation.id, {"status": InvitationStatus.DECLINED})
+
+    async def preview_by_token(self, token: str) -> InvitationPreviewResponse:
+        """Public — no auth. Returns enough info for the accept-invite page."""
+        invitation = await self.invitation_repository.get_by_token_with_relations(token)
+        if invitation is None or invitation.status != InvitationStatus.PENDING:
+            raise NotFoundError(detail="Invitation not found or no longer valid")
+
+        invitee_has_account = await self.user_repository.get_by_email(invitation.invitee_email) is not None
+
+        return InvitationPreviewResponse(
+            group_id=invitation.group_id,
+            group_name=invitation.group.name,
+            group_logo_path=invitation.group.logo_path,
+            inviter_full_name=invitation.inviter.full_name,
+            inviter_email=invitation.inviter.email,
+            invitee_email=invitation.invitee_email,
+            invitee_has_account=invitee_has_account,
+        )
+
+    async def list_my_pending(self, user: User) -> list[MyInvitationResponse]:
+        """Returns all pending invitations addressed to the current user."""
+        invitations = await self.invitation_repository.get_pending_for_user(user.id)
+        result = []
+        for inv in invitations:
+            group = getattr(inv, "group", None)
+            inviter = getattr(inv, "inviter", None)
+            result.append(
+                MyInvitationResponse(
+                    id=inv.id,
+                    group_id=inv.group_id,
+                    group_name=group.name if group else "Unknown group",
+                    group_logo_path=group.logo_path if group else None,
+                    inviter_full_name=inviter.full_name if inviter else None,
+                    invitee_email=inv.invitee_email,
+                    status=inv.status,
+                    token=inv.token,
+                    created_at=inv.created_at,
+                )
+            )
+        return result
 
     async def list_pending_invitations(self, input_data: ListInvitationsInput) -> ListInvitationsOutput:
         user: User = input_data.current_user  # type: ignore[assignment]

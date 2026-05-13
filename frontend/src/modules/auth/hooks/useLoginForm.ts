@@ -12,13 +12,17 @@ export function useLoginForm() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = (location.state as { from?: { pathname: string } })?.from
-    ?.pathname ?? ROUTES.HOME;
+  const locationState = location.state as {
+    from?: { pathname: string };
+    prefillEmail?: string;
+  } | null;
+  const from = locationState?.from?.pathname ?? ROUTES.HOME;
+  const prefillEmail = locationState?.prefillEmail ?? "";
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      email: prefillEmail,
       password: "",
     },
   });

@@ -8,8 +8,11 @@ import type {
   GroupMemberCreateRequest,
   GroupMemberUpdateRequest,
   GroupUpdateRequest,
+  InvitationAcceptResult,
   InvitationCreateRequest,
+  InvitationPreview,
   MessageResponse,
+  MyInvitation,
 } from "@/types";
 import { baseApi } from "./baseApi";
 
@@ -126,6 +129,15 @@ export const groupApi = baseApi.injectEndpoints({
     }),
 
     // Invitations
+    getInvitationByToken: builder.query<InvitationPreview, string>({
+      query: (token) => API_ENDPOINTS.GROUPS.INVITATION_BY_TOKEN(token),
+    }),
+
+    getMyPendingInvitations: builder.query<MyInvitation[], void>({
+      query: () => API_ENDPOINTS.GROUPS.MY_INVITATIONS,
+      providesTags: [{ type: "GroupInvitation" as const, id: "MINE" }],
+    }),
+
     getGroupInvitations: builder.query<GroupInvitation[], string>({
       query: (groupId) => API_ENDPOINTS.GROUPS.INVITATIONS(groupId),
       providesTags: (result, _error, groupId) =>
@@ -168,12 +180,15 @@ export const groupApi = baseApi.injectEndpoints({
       ],
     }),
 
-    acceptInvitation: builder.mutation<MessageResponse, string>({
+    acceptInvitation: builder.mutation<InvitationAcceptResult, string>({
       query: (token) => ({
         url: API_ENDPOINTS.GROUPS.ACCEPT_INVITATION(token),
         method: "POST",
       }),
-      invalidatesTags: [{ type: "Group" as const, id: "LIST" }],
+      invalidatesTags: [
+        { type: "Group" as const, id: "LIST" },
+        { type: "GroupInvitation" as const, id: "MINE" },
+      ],
     }),
 
     declineInvitation: builder.mutation<MessageResponse, string>({
@@ -181,6 +196,7 @@ export const groupApi = baseApi.injectEndpoints({
         url: API_ENDPOINTS.GROUPS.DECLINE_INVITATION(token),
         method: "POST",
       }),
+      invalidatesTags: [{ type: "GroupInvitation" as const, id: "MINE" }],
     }),
   }),
 });
@@ -195,6 +211,8 @@ export const {
   useAddGroupMemberMutation,
   useUpdateGroupMemberMutation,
   useRemoveGroupMemberMutation,
+  useGetInvitationByTokenQuery,
+  useGetMyPendingInvitationsQuery,
   useGetGroupInvitationsQuery,
   useCreateInvitationMutation,
   useCancelInvitationMutation,

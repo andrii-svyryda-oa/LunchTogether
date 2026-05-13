@@ -59,6 +59,33 @@ export interface GroupInvitation {
   inviter_email?: string | null;
 }
 
+export interface InvitationPreview {
+  group_id: string;
+  group_name: string;
+  group_logo_path: string | null;
+  inviter_full_name: string;
+  inviter_email: string;
+  invitee_email: string;
+  invitee_has_account: boolean;
+}
+
+export interface MyInvitation {
+  id: string;
+  group_id: string;
+  group_name: string;
+  group_logo_path: string | null;
+  inviter_full_name: string | null;
+  invitee_email: string;
+  status: string;
+  token: string;
+  created_at: string;
+}
+
+export interface InvitationAcceptResult {
+  message: string;
+  group_id: string;
+}
+
 // --- Restaurants ---
 
 export interface Restaurant {

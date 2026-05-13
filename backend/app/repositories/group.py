@@ -137,6 +137,19 @@ class GroupInvitationRepository(BaseRepository[GroupInvitation]):
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
+    async def get_by_token_with_relations(self, token: str) -> GroupInvitation | None:
+        """Load invitation with group and inviter eagerly joined (for public preview)."""
+        query = (
+            select(GroupInvitation)
+            .where(GroupInvitation.token == token)
+            .options(
+                joinedload(GroupInvitation.group),
+                joinedload(GroupInvitation.inviter),
+            )
+        )
+        result = await self.session.execute(query)
+        return result.unique().scalar_one_or_none()
+
     async def get_pending_for_email(self, email: str, group_id: uuid.UUID) -> GroupInvitation | None:
         query = select(GroupInvitation).where(
             GroupInvitation.invitee_email == email,
@@ -153,7 +166,11 @@ class GroupInvitationRepository(BaseRepository[GroupInvitation]):
                 GroupInvitation.invitee_id == user_id,
                 GroupInvitation.status == "pending",
             )
-            .options(joinedload(GroupInvitation.group))
+            .options(
+                joinedload(GroupInvitation.group),
+                joinedload(GroupInvitation.inviter),
+            )
+            .order_by(GroupInvitation.created_at.desc())
         )
         result = await self.session.execute(query)
         return list(result.unique().scalars().all())

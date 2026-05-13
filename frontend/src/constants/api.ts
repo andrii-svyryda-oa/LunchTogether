@@ -20,6 +20,9 @@ export const API_ENDPOINTS = {
     INVITATIONS: (groupId: string) => `/groups/${groupId}/invitations`,
     INVITATION_DETAIL: (groupId: string, invitationId: string) =>
       `/groups/${groupId}/invitations/${invitationId}`,
+    INVITATION_BY_TOKEN: (token: string) =>
+      `/groups/invitations/by-token/${token}`,
+    MY_INVITATIONS: "/groups/invitations/mine",
     ACCEPT_INVITATION: (token: string) => `/groups/invitations/${token}/accept`,
     DECLINE_INVITATION: (token: string) =>
       `/groups/invitations/${token}/decline`,

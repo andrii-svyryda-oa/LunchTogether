@@ -4,6 +4,8 @@ export const ROUTES = {
   REGISTER: "/register",
   PROFILE: "/profile",
   SETTINGS: "/settings",
+  INVITATIONS: "/invitations",
+  INVITATIONS_ACCEPT: "/invitations/accept",
   USERS: "/users",
   USER_DETAIL: "/users/:id",
   GROUPS: "/groups",

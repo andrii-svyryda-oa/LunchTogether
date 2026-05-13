@@ -13,11 +13,13 @@ import { useAuth } from "@/hooks";
 import {
   useCreateGroupMutation,
   useGetGroupsQuery,
+  useGetMyPendingInvitationsQuery,
 } from "@/store/api/groupApi";
 import { cn } from "@/utils";
 import {
   Home,
   LayoutDashboard,
+  Mail,
   Plus,
   Settings,
   ShieldCheck,
@@ -36,7 +38,7 @@ interface SidebarProps {
 }
 
 // Pages that belong to the "home" context
-const HOME_PATHS = ["/", "/profile", "/settings", "/users"];
+const HOME_PATHS = ["/", "/profile", "/settings", "/users", "/invitations"];
 
 function isHomeContext(pathname: string): boolean {
   return HOME_PATHS.some(
@@ -49,8 +51,12 @@ function isGroupContext(pathname: string): boolean {
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { data: groups } = useGetGroupsQuery();
+  const { data: myInvitations } = useGetMyPendingInvitationsQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const pendingInviteCount = myInvitations?.length ?? 0;
   const location = useLocation();
   const { groupId } = useParams<{ groupId: string }>();
   const [createGroup] = useCreateGroupMutation();
@@ -211,6 +217,27 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 >
                   <Home className="h-4 w-4" />
                   Home
+                </NavLink>
+
+                <NavLink
+                  to={ROUTES.INVITATIONS}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-primary"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    )
+                  }
+                >
+                  <Mail className="h-4 w-4" />
+                  Pending Invites
+                  {pendingInviteCount > 0 && (
+                    <span className="ml-auto text-[11px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                      {pendingInviteCount}
+                    </span>
+                  )}
                 </NavLink>
 
                 <NavLink

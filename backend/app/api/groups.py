@@ -24,8 +24,11 @@ from app.schemas.group import (
     GroupMemberUpdate,
     GroupResponse,
     GroupUpdate,
+    InvitationAcceptResponse,
     InvitationCreate,
+    InvitationPreviewResponse,
     InvitationResponse,
+    MyInvitationResponse,
     PermissionResponse,
 )
 from app.workflows.group.create import CreateGroupInput, CreateGroupWorkflow
@@ -286,14 +289,32 @@ async def cancel_invitation(
     return MessageResponse(message="Invitation cancelled")
 
 
-@router.post("/invitations/{token}/accept", response_model=MessageResponse)
+@router.get("/invitations/by-token/{token}", response_model=InvitationPreviewResponse)
+async def preview_invitation(
+    token: str,
+    workflow: InviteWorkflow = Depends(get_invite_workflow),
+) -> InvitationPreviewResponse:
+    """Public endpoint — no authentication required. Returns invite preview for the accept page."""
+    return await workflow.preview_by_token(token)
+
+
+@router.get("/invitations/mine", response_model=list[MyInvitationResponse])
+async def my_pending_invitations(
+    current_user: User = Depends(get_current_user),
+    workflow: InviteWorkflow = Depends(get_invite_workflow),
+) -> list[MyInvitationResponse]:
+    """Returns all pending invitations for the currently authenticated user."""
+    return await workflow.list_my_pending(current_user)
+
+
+@router.post("/invitations/{token}/accept", response_model=InvitationAcceptResponse)
 async def accept_invitation(
     token: str,
     current_user: User = Depends(get_current_user),
     workflow: InviteWorkflow = Depends(get_invite_workflow),
-) -> MessageResponse:
+) -> InvitationAcceptResponse:
     result = await workflow.accept_invitation(AcceptInviteInput(token=token, current_user=current_user))
-    return MessageResponse(message=result.result.message)
+    return result.result
 
 
 @router.post("/invitations/{token}/decline", response_model=MessageResponse)

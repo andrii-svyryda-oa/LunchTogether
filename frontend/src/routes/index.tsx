@@ -7,6 +7,8 @@ import { createBrowserRouter } from "react-router-dom";
 import { LoginPage } from "@/modules/auth/pages/LoginPage";
 import { RegisterPage } from "@/modules/auth/pages/RegisterPage";
 import { BalancesPage } from "@/modules/balance/pages/BalancesPage";
+import { AcceptInvitationPage } from "@/modules/invitations/pages/AcceptInvitationPage";
+import { PendingInvitesPage } from "@/modules/invitations/pages/PendingInvitesPage";
 import { SettingsPage } from "@/modules/dashboard/pages/SettingsPage";
 import { UserDashboardPage } from "@/modules/dashboard/pages/UserDashboardPage";
 import { GroupDetailPage } from "@/modules/group/pages/GroupDetailPage";
@@ -74,6 +76,20 @@ export const router = createBrowserRouter([
       {
         path: ROUTES.REGISTER,
         element: <RegisterPage />,
+      },
+
+      // Invitations — accept is public (handles unauthenticated users)
+      {
+        path: ROUTES.INVITATIONS_ACCEPT,
+        element: <AcceptInvitationPage />,
+      },
+      {
+        path: ROUTES.INVITATIONS,
+        element: (
+          <ProtectedRoute>
+            <PendingInvitesPage />
+          </ProtectedRoute>
+        ),
       },
 
       // Users (admin)
