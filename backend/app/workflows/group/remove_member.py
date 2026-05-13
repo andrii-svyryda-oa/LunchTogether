@@ -46,7 +46,5 @@ class RemoveMemberWorkflow:
             if group.owner_id == input_data.member_user_id:
                 raise ForbiddenError(detail="Cannot modify the group owner")
 
-        removed = await self.group_member_repository.delete_membership(
-            input_data.member_user_id, input_data.group_id
-        )
+        removed = await self.group_member_repository.delete_membership(input_data.member_user_id, input_data.group_id)
         return RemoveMemberOutput(removed=removed)

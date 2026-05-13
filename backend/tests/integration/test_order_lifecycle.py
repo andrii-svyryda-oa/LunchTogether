@@ -22,9 +22,7 @@ async def _transition(ac: AsyncClient, group_id, order_id, status: str):
 
 
 class TestCreateOrder:
-    async def test_editor_can_create_order(
-        self, client: AsyncClient, factory_user, factory_group, auth_client
-    ):
+    async def test_editor_can_create_order(self, client: AsyncClient, factory_user, factory_group, auth_client):
         owner = await factory_user(email="co_own@example.com")
         group = await factory_group(owner)
         ac = await auth_client(owner)
@@ -56,9 +54,7 @@ class TestCreateOrder:
         resp = await ac.post(f"/api/groups/{group.id}/orders", json={"restaurant_name": "Sushi"})
         assert resp.status_code == 403
 
-    async def test_one_active_order_rule_enforced(
-        self, client: AsyncClient, factory_user, factory_group, auth_client
-    ):
+    async def test_one_active_order_rule_enforced(self, client: AsyncClient, factory_user, factory_group, auth_client):
         owner = await factory_user(email="one_own@example.com")
         group = await factory_group(owner)
         ac = await auth_client(owner)
@@ -82,9 +78,7 @@ class TestCreateOrder:
         from app.models.restaurant import Restaurant
 
         result = await db.execute(
-            select(Restaurant).where(
-                Restaurant.name == "Brand New Place", Restaurant.group_id == group.id
-            )
+            select(Restaurant).where(Restaurant.name == "Brand New Place", Restaurant.group_id == group.id)
         )
         restaurant = result.scalars().first()
         assert restaurant is not None
@@ -184,7 +178,14 @@ class TestTransitions:
         assert resp.status_code == 422
 
     async def test_non_initiator_non_editor_cannot_transition(
-        self, client: AsyncClient, factory_user, factory_group, factory_group_with_members, factory_order, auth_client, db
+        self,
+        client: AsyncClient,
+        factory_user,
+        factory_group,
+        factory_group_with_members,
+        factory_order,
+        auth_client,
+        db,
     ):
         owner = await factory_user(email="nonedit_own@example.com")
         initiator = await factory_user(email="nonedit_init@example.com")
@@ -205,7 +206,14 @@ class TestTransitions:
 
 class TestItemCRUD:
     async def test_any_member_can_add_item_in_initiated(
-        self, client: AsyncClient, factory_user, factory_group, factory_group_with_members, factory_order, auth_client, db
+        self,
+        client: AsyncClient,
+        factory_user,
+        factory_group,
+        factory_group_with_members,
+        factory_order,
+        auth_client,
+        db,
     ):
         owner = await factory_user(email="item_init_own@example.com")
         member = await factory_user(email="item_init_member@example.com")
@@ -219,7 +227,14 @@ class TestItemCRUD:
         assert resp.status_code == 201
 
     async def test_only_initiator_editor_can_add_item_in_confirmed(
-        self, client: AsyncClient, factory_user, factory_group, factory_group_with_members, factory_order, auth_client, db
+        self,
+        client: AsyncClient,
+        factory_user,
+        factory_group,
+        factory_group_with_members,
+        factory_order,
+        auth_client,
+        db,
     ):
         owner = await factory_user(email="item_conf_own@example.com")
         participant = await factory_user(email="item_conf_part@example.com")
@@ -236,7 +251,14 @@ class TestItemCRUD:
         assert resp.status_code == 403
 
     async def test_in_initiated_non_editor_can_only_edit_own_item(
-        self, client: AsyncClient, factory_user, factory_group, factory_group_with_members, factory_order, auth_client, db
+        self,
+        client: AsyncClient,
+        factory_user,
+        factory_group,
+        factory_group_with_members,
+        factory_order,
+        auth_client,
+        db,
     ):
         owner = await factory_user(email="ownedit_own@example.com")
         member = await factory_user(email="ownedit_mem@example.com")
@@ -336,9 +358,7 @@ class TestFinishBalanceSideEffects:
 
         from app.models.balance import Balance
 
-        result = await db.execute(
-            select(Balance).where(Balance.user_id == owner.id, Balance.group_id == group.id)
-        )
+        result = await db.execute(select(Balance).where(Balance.user_id == owner.id, Balance.group_id == group.id))
         balance = result.scalars().first()
         assert balance is None
 

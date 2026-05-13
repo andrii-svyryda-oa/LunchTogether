@@ -41,8 +41,6 @@ class RegisterWorkflow:
         )
 
         if self.link_workflow is not None:
-            await self.link_workflow.execute(
-                LinkInvitationsToUserInput(user_id=user.id, user_email=user.email)
-            )
+            await self.link_workflow.execute(LinkInvitationsToUserInput(user_id=user.id, user_email=user.email))
 
         return RegisterOutput(user=UserResponse.model_validate(user))

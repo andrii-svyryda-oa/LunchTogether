@@ -19,14 +19,18 @@ class GroupAnalyticsRepository:
         return (await self.session.execute(query)).scalar_one()
 
     async def count_completed_orders(self, group_id: uuid.UUID) -> int:
-        query = select(func.count()).select_from(Order).where(
-            Order.group_id == group_id, Order.status == OrderStatus.FINISHED
+        query = (
+            select(func.count())
+            .select_from(Order)
+            .where(Order.group_id == group_id, Order.status == OrderStatus.FINISHED)
         )
         return (await self.session.execute(query)).scalar_one()
 
     async def count_cancelled_orders(self, group_id: uuid.UUID) -> int:
-        query = select(func.count()).select_from(Order).where(
-            Order.group_id == group_id, Order.status == OrderStatus.CANCELLED
+        query = (
+            select(func.count())
+            .select_from(Order)
+            .where(Order.group_id == group_id, Order.status == OrderStatus.CANCELLED)
         )
         return (await self.session.execute(query)).scalar_one()
 

@@ -61,6 +61,4 @@ class ListPendingForGroupWorkflow:
                 raise ForbiddenError(detail="You are not a member of this group")
 
         invitations = await self.invitation_repository.get_pending_for_group(input_data.group_id)
-        return ListPendingForGroupOutput(
-            invitations=[_build_invitation_response(inv) for inv in invitations]
-        )
+        return ListPendingForGroupOutput(invitations=[_build_invitation_response(inv) for inv in invitations])

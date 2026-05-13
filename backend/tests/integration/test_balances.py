@@ -49,9 +49,7 @@ class TestMyBalance:
 
 
 class TestAdjustBalance:
-    async def test_editor_can_adjust_balance(
-        self, client: AsyncClient, factory_user, factory_group, auth_client, db
-    ):
+    async def test_editor_can_adjust_balance(self, client: AsyncClient, factory_user, factory_group, auth_client, db):
         owner = await factory_user(email="adj_own@example.com")
         target = await factory_user(email="adj_target@example.com")
         group = await factory_group(owner)

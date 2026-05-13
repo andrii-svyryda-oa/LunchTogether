@@ -39,8 +39,7 @@ class ListMembersWorkflow:
                     user_id=m.user_id,
                     group_id=m.group_id,
                     permissions=[
-                        PermissionResponse(permission_type=p.permission_type, level=p.level)
-                        for p in m.permissions
+                        PermissionResponse(permission_type=p.permission_type, level=p.level) for p in m.permissions
                     ],
                     created_at=m.created_at,
                     updated_at=m.updated_at,

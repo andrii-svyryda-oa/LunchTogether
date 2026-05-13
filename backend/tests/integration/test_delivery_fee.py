@@ -14,7 +14,14 @@ async def _transition(ac: AsyncClient, group_id, order_id, status: str):
 
 class TestDeliveryFeeCalculation:
     async def test_set_total_splits_to_per_person(
-        self, client: AsyncClient, factory_user, factory_group, factory_group_with_members, factory_order, auth_client, db
+        self,
+        client: AsyncClient,
+        factory_user,
+        factory_group,
+        factory_group_with_members,
+        factory_order,
+        auth_client,
+        db,
     ):
         owner = await factory_user(email="fee_total_own@example.com")
         member = await factory_user(email="fee_total_mem@example.com")
@@ -34,7 +41,14 @@ class TestDeliveryFeeCalculation:
         assert Decimal(data["delivery_fee_per_person"]) == Decimal("3.00")
 
     async def test_set_per_person_multiplies_to_total(
-        self, client: AsyncClient, factory_user, factory_group, factory_group_with_members, factory_order, auth_client, db
+        self,
+        client: AsyncClient,
+        factory_user,
+        factory_group,
+        factory_group_with_members,
+        factory_order,
+        auth_client,
+        db,
     ):
         owner = await factory_user(email="fee_pp_own@example.com")
         member = await factory_user(email="fee_pp_mem@example.com")
@@ -71,7 +85,14 @@ class TestDeliveryFeeCalculation:
         assert resp.status_code == 422
 
     async def test_fee_included_in_finish_debit(
-        self, client: AsyncClient, factory_user, factory_group, factory_group_with_members, factory_order, auth_client, db
+        self,
+        client: AsyncClient,
+        factory_user,
+        factory_group,
+        factory_group_with_members,
+        factory_order,
+        auth_client,
+        db,
     ):
         owner = await factory_user(email="fee_debit_own@example.com")
         group = await factory_group(owner)
@@ -94,7 +115,14 @@ class TestDeliveryFeeCalculation:
         assert balance.amount == Decimal("-12.00")
 
     async def test_rounding_quantize_to_two_decimal_places(
-        self, client: AsyncClient, factory_user, factory_group, factory_group_with_members, factory_order, auth_client, db
+        self,
+        client: AsyncClient,
+        factory_user,
+        factory_group,
+        factory_group_with_members,
+        factory_order,
+        auth_client,
+        db,
     ):
         """Splitting 10.00 / 3 = 3.333... should be stored as 3.33."""
         owner = await factory_user(email="fee_round_own@example.com")

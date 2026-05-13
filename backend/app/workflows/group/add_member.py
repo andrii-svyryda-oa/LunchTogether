@@ -17,9 +17,7 @@ def _build_member_response(member, target_user=None) -> GroupMemberResponse:
         id=member.id,
         user_id=member.user_id,
         group_id=member.group_id,
-        permissions=[
-            PermissionResponse(permission_type=p.permission_type, level=p.level) for p in member.permissions
-        ],
+        permissions=[PermissionResponse(permission_type=p.permission_type, level=p.level) for p in member.permissions],
         created_at=member.created_at,
         updated_at=member.updated_at,
         user_full_name=target_user.full_name if target_user else (member.user.full_name if member.user else None),

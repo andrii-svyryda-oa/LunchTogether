@@ -28,8 +28,6 @@ class ListUsersWorkflow:
         if input_data.current_user.role != UserRole.ADMIN:
             raise ForbiddenError(detail="Admin access required to list all users")
 
-        result = await self.user_repository.get_multi(
-            page=input_data.page, page_size=input_data.page_size
-        )
+        result = await self.user_repository.get_multi(page=input_data.page, page_size=input_data.page_size)
         result.items = [UserResponse.model_validate(u) for u in result.items]
         return ListUsersOutput(result=result)

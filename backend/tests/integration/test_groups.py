@@ -48,7 +48,9 @@ class TestGetGroup:
         assert resp.status_code == 200
         assert resp.json()["id"] == str(group.id)
 
-    async def test_get_group_detail_non_member_forbidden(self, client: AsyncClient, factory_user, factory_group, auth_client):
+    async def test_get_group_detail_non_member_forbidden(
+        self, client: AsyncClient, factory_user, factory_group, auth_client
+    ):
         owner = await factory_user(email="owner2@example.com")
         stranger = await factory_user(email="stranger@example.com")
         group = await factory_group(owner)
@@ -77,7 +79,9 @@ class TestUpdateGroup:
         assert resp.status_code == 200
         assert resp.json()["name"] == "Renamed"
 
-    async def test_patch_group_non_member_forbidden(self, client: AsyncClient, factory_user, factory_group, auth_client):
+    async def test_patch_group_non_member_forbidden(
+        self, client: AsyncClient, factory_user, factory_group, auth_client
+    ):
         owner = await factory_user(email="patchown2@example.com")
         stranger = await factory_user(email="stranger2@example.com")
         group = await factory_group(owner)
@@ -87,7 +91,9 @@ class TestUpdateGroup:
 
 
 class TestUploadLogo:
-    async def test_upload_logo_sets_logo_path(self, client: AsyncClient, factory_user, factory_group, auth_client, tmp_path, monkeypatch):
+    async def test_upload_logo_sets_logo_path(
+        self, client: AsyncClient, factory_user, factory_group, auth_client, tmp_path, monkeypatch
+    ):
         import app.core.storage as storage_module
 
         saved: list[str] = []
@@ -118,7 +124,9 @@ class TestDeleteGroup:
         resp = await ac.delete(f"/api/groups/{group.id}")
         assert resp.status_code == 200
 
-    async def test_delete_group_non_owner_forbidden(self, client: AsyncClient, factory_user, factory_group, auth_client):
+    async def test_delete_group_non_owner_forbidden(
+        self, client: AsyncClient, factory_user, factory_group, auth_client
+    ):
         owner = await factory_user(email="delown2@example.com")
         member = await factory_user(email="member@example.com")
         group = await factory_group(owner)

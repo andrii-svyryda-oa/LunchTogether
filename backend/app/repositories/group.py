@@ -137,8 +137,7 @@ class GroupMemberPermissionRepository(BaseRepository[GroupMemberPermission]):
         dedicated workflow in Phase 3.
         """
         return [
-            await self.upsert_permission(group_member_id, perm_type, level)
-            for perm_type, level in permissions.items()
+            await self.upsert_permission(group_member_id, perm_type, level) for perm_type, level in permissions.items()
         ]
 
 

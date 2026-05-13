@@ -38,6 +38,4 @@ class ListRestaurantsWorkflow:
                 raise ForbiddenError(detail="You are not a member of this group")
 
         restaurants = await self.restaurant_repository.get_by_group(input_data.group_id)
-        return ListRestaurantsOutput(
-            restaurants=[RestaurantResponse.model_validate(r) for r in restaurants]
-        )
+        return ListRestaurantsOutput(restaurants=[RestaurantResponse.model_validate(r) for r in restaurants])

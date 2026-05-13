@@ -1,6 +1,5 @@
 """Integration tests for the invitation flow (§6.4.4 — 11 tests)."""
 
-
 from httpx import AsyncClient
 
 from app.models.enums import GroupRole
@@ -18,7 +17,9 @@ class TestCreateInvitation:
         assert data["status"] == "pending"
         assert "token" in data
 
-    async def test_non_member_cannot_invite(self, client: AsyncClient, factory_user, factory_group, auth_client, mock_email):
+    async def test_non_member_cannot_invite(
+        self, client: AsyncClient, factory_user, factory_group, auth_client, mock_email
+    ):
         owner = await factory_user(email="invown2@example.com")
         stranger = await factory_user(email="stranger3@example.com")
         group = await factory_group(owner)
@@ -26,7 +27,9 @@ class TestCreateInvitation:
         resp = await ac.post(f"/api/groups/{group.id}/invitations", json={"email": "target@example.com"})
         assert resp.status_code == 403
 
-    async def test_duplicate_pending_invitation_rejected(self, client: AsyncClient, factory_user, factory_group, auth_client, mock_email):
+    async def test_duplicate_pending_invitation_rejected(
+        self, client: AsyncClient, factory_user, factory_group, auth_client, mock_email
+    ):
         owner = await factory_user(email="dupinvowner@example.com")
         group = await factory_group(owner)
         ac = await auth_client(owner)
@@ -34,7 +37,9 @@ class TestCreateInvitation:
         resp = await ac.post(f"/api/groups/{group.id}/invitations", json={"email": "dup@example.com"})
         assert resp.status_code == 409
 
-    async def test_invite_already_member_rejected(self, client: AsyncClient, factory_user, factory_group, auth_client, mock_email):
+    async def test_invite_already_member_rejected(
+        self, client: AsyncClient, factory_user, factory_group, auth_client, mock_email
+    ):
         owner = await factory_user(email="invown3@example.com")
         existing_member = await factory_user(email="existing@example.com")
         group = await factory_group(owner)
@@ -47,7 +52,9 @@ class TestCreateInvitation:
 
 
 class TestListInvitations:
-    async def test_member_can_list_pending(self, client: AsyncClient, factory_user, factory_group, auth_client, mock_email):
+    async def test_member_can_list_pending(
+        self, client: AsyncClient, factory_user, factory_group, auth_client, mock_email
+    ):
         owner = await factory_user(email="listinv@example.com")
         group = await factory_group(owner)
         ac = await auth_client(owner)
@@ -151,9 +158,7 @@ class TestAcceptInvitation:
 
 
 class TestDeclineInvitation:
-    async def test_invitee_can_decline(
-        self, client: AsyncClient, factory_user, factory_group, auth_client, mock_email
-    ):
+    async def test_invitee_can_decline(self, client: AsyncClient, factory_user, factory_group, auth_client, mock_email):
         owner = await factory_user(email="decown@example.com")
         invitee = await factory_user(email="decinvitee@example.com")
         group = await factory_group(owner)

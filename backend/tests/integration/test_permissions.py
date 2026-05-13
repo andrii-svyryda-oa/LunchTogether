@@ -18,7 +18,9 @@ class TestMembersPermission:
         owner = await factory_user(email="perm_own@example.com")
         viewer = await factory_user(email="perm_viewer@example.com")
         target = await factory_user(email="perm_target@example.com")
-        group = await factory_group_with_members(owner, [(viewer, GroupRole.SUPERVISOR_MEMBER), (target, GroupRole.MEMBER)])
+        group = await factory_group_with_members(
+            owner, [(viewer, GroupRole.SUPERVISOR_MEMBER), (target, GroupRole.MEMBER)]
+        )
         # Supervisor member has MembersScope.VIEWER — not editor
         ac = await auth_client(viewer)
         resp = await ac.patch(
@@ -82,7 +84,14 @@ class TestMembersPermission:
 
 class TestOrdersPermission:
     async def test_orders_editor_can_transition_others_order(
-        self, client: AsyncClient, factory_user, factory_group, factory_group_with_members, factory_order, auth_client, db
+        self,
+        client: AsyncClient,
+        factory_user,
+        factory_group,
+        factory_group_with_members,
+        factory_order,
+        auth_client,
+        db,
     ):
         owner = await factory_user(email="ord_own@example.com")
         initiator = await factory_user(email="ord_initiator@example.com")

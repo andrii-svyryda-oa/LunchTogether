@@ -79,9 +79,7 @@ class TransitionOrderWorkflow:
         if new_status == OrderStatus.FINISHED:
             await self._handle_finish(order)
 
-        updated = await self.order_repository.update(
-            order.id, OrderStatusInternalUpdate(status=new_status.value)
-        )
+        updated = await self.order_repository.update(order.id, OrderStatusInternalUpdate(status=new_status.value))
 
         return TransitionOrderOutput(order=OrderResponse.model_validate(updated))
 

@@ -46,7 +46,14 @@ class TestRestaurantCRUD:
         assert resp2.json()["name"] == "Updated Place"
 
     async def test_delete_restaurant_editor_only(
-        self, client: AsyncClient, factory_user, factory_group, factory_group_with_members, factory_restaurant, auth_client, db
+        self,
+        client: AsyncClient,
+        factory_user,
+        factory_group,
+        factory_group_with_members,
+        factory_restaurant,
+        auth_client,
+        db,
     ):
         owner = await factory_user(email="rdel_own@example.com")
         viewer = await factory_user(email="rdel_viewer@example.com")
