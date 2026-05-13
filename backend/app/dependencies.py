@@ -378,7 +378,9 @@ def get_add_order_item_workflow(
     user_repository: UserRepository = Depends(get_user_repository),
     dish_repository: DishRepository = Depends(get_dish_repository),
 ) -> AddOrderItemWorkflow:
-    return AddOrderItemWorkflow(order_repository, order_item_repository, group_member_repository, user_repository, dish_repository)
+    return AddOrderItemWorkflow(
+        order_repository, order_item_repository, group_member_repository, user_repository, dish_repository
+    )
 
 
 def get_update_order_item_workflow(
