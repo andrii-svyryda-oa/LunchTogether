@@ -2,11 +2,12 @@ import uuid
 
 from pydantic import BaseModel, ConfigDict
 
-from app.core.exceptions import ForbiddenError, NotFoundError
+from app.core.exceptions import ForbiddenError, NotFoundError, ValidationError
 from app.models.enums import OrdersScope, OrderStatus, PermissionType
 from app.models.user import User
 from app.repositories.group import GroupMemberRepository
 from app.repositories.order import OrderItemRepository, OrderRepository
+from app.repositories.restaurant import DishRepository
 from app.repositories.user import UserRepository
 from app.schemas.internal import OrderItemInternalCreate
 from app.schemas.order import OrderItemCreate, OrderItemResponse
@@ -32,11 +33,13 @@ class AddOrderItemWorkflow:
         order_item_repository: OrderItemRepository,
         group_member_repository: GroupMemberRepository,
         user_repository: UserRepository,
+        dish_repository: DishRepository,
     ):
         self.order_repository = order_repository
         self.order_item_repository = order_item_repository
         self.group_member_repository = group_member_repository
         self.user_repository = user_repository
+        self.dish_repository = dish_repository
 
     async def execute(self, input_data: AddOrderItemInput) -> AddOrderItemOutput:
         user = input_data.current_user
@@ -72,6 +75,13 @@ class AddOrderItemWorkflow:
             target_user_id = input_data.data.user_id
             target_user = await self.user_repository.get_by_id(input_data.data.user_id)
             target_user_name = target_user.full_name if target_user else None
+
+        if input_data.data.dish_id is not None:
+            dish = await self.dish_repository.get_by_id(input_data.data.dish_id)
+            if dish is None:
+                raise NotFoundError(detail="Dish not found")
+            if order.restaurant_id is None or dish.restaurant_id != order.restaurant_id:
+                raise ValidationError(detail="Dish does not belong to this order's restaurant")
 
         item = await self.order_item_repository.create(
             OrderItemInternalCreate(

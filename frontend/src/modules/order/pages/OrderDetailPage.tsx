@@ -20,6 +20,7 @@ import {
   useUpdateOrderItemMutation,
   useUpdateOrderStatusMutation,
 } from "@/store/api/orderApi";
+import { useGetRestaurantQuery } from "@/store/api/restaurantApi";
 import type { OrderItem } from "@/types";
 import { cn } from "@/utils";
 import {
@@ -86,6 +87,11 @@ export function OrderDetailPage() {
   const [deleteItem] = useDeleteOrderItemMutation();
   const [setDeliveryFee] = useSetDeliveryFeeMutation();
 
+  const { data: restaurant } = useGetRestaurantQuery(
+    { groupId: groupId!, restaurantId: order?.restaurant_id ?? "" },
+    { skip: !groupId || !order?.restaurant_id },
+  );
+
   // Add item state
   const [addOpen, setAddOpen] = useState(false);
   const [addForUserId, setAddForUserId] = useState<string | null>(null);
@@ -93,6 +99,7 @@ export function OrderDetailPage() {
   const [itemDetail, setItemDetail] = useState("");
   const [itemPrice, setItemPrice] = useState("");
   const [itemQuantity, setItemQuantity] = useState("1");
+  const [selectedDishId, setSelectedDishId] = useState<string | null>(null);
 
   // Edit item state
   const [editOpen, setEditOpen] = useState(false);
@@ -115,6 +122,7 @@ export function OrderDetailPage() {
     setItemPrice("");
     setItemQuantity("1");
     setAddForUserId(null);
+    setSelectedDishId(null);
   };
 
   const handleAddItem = async () => {
@@ -128,6 +136,7 @@ export function OrderDetailPage() {
           price: parseFloat(itemPrice),
           quantity: parseInt(itemQuantity) || 1,
           user_id: addForUserId || undefined,
+          dish_id: selectedDishId || undefined,
         },
       }).unwrap();
       setAddOpen(false);
@@ -460,11 +469,40 @@ export function OrderDetailPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
+            {restaurant && restaurant.dishes && restaurant.dishes.length > 0 && (
+              <div className="space-y-2">
+                <Label>Choose from menu</Label>
+                <div className="max-h-48 overflow-y-auto space-y-1 rounded-md border p-1">
+                  {restaurant.dishes.map((dish) => (
+                    <Button
+                      key={dish.id}
+                      type="button"
+                      variant={selectedDishId === dish.id ? "default" : "outline"}
+                      className="w-full justify-between h-auto py-2 px-3"
+                      onClick={() => {
+                        setSelectedDishId(dish.id);
+                        setItemName(dish.name);
+                        setItemDetail(dish.detail ?? "");
+                        setItemPrice(String(dish.price));
+                      }}
+                    >
+                      <span className="font-medium text-sm">{dish.name}</span>
+                      <span className="text-sm text-muted-foreground ml-2 shrink-0">
+                        {Number(dish.price).toFixed(2)} ₴
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Dish Name</Label>
               <Input
                 value={itemName}
-                onChange={(e) => setItemName(e.target.value)}
+                onChange={(e) => {
+                  setItemName(e.target.value);
+                  setSelectedDishId(null);
+                }}
                 placeholder="Burger"
               />
             </div>
@@ -484,7 +522,10 @@ export function OrderDetailPage() {
                   step="0.01"
                   min="0"
                   value={itemPrice}
-                  onChange={(e) => setItemPrice(e.target.value)}
+                  onChange={(e) => {
+                    setItemPrice(e.target.value);
+                    setSelectedDishId(null);
+                  }}
                   placeholder="9.99"
                 />
               </div>
