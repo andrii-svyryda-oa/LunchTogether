@@ -11,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAuth } from "@/hooks";
+import { useAuth, useGroupPermissions } from "@/hooks";
 import {
   useCancelInvitationMutation,
   useCreateInvitationMutation,
@@ -116,6 +116,7 @@ export function GroupMembersPage() {
   }
 
   const isOwner = group?.owner_id === user?.id;
+  const { canInviteMembers, canManageMembers } = useGroupPermissions(groupId);
 
   return (
     <div>
@@ -126,6 +127,7 @@ export function GroupMembersPage() {
             {members?.length ?? 0} members in this group
           </p>
         </div>
+        {canInviteMembers && (
         <Dialog open={inviteOpen} onOpenChange={handleInviteDialogChange}>
           <DialogTrigger asChild>
             <Button className="shadow-md shadow-primary/20">
@@ -178,6 +180,7 @@ export function GroupMembersPage() {
             </div>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {members && members.length === 0 ? (
@@ -228,7 +231,7 @@ export function GroupMembersPage() {
                         </span>
                       ))}
                     </div>
-                    {!memberIsOwner && (isOwner || user?.role === "admin") && (
+                    {!memberIsOwner && (isOwner || user?.role === "admin" || canManageMembers) && (
                       <>
                         <div className="w-36">
                           <Combobox
@@ -274,6 +277,7 @@ export function GroupMembersPage() {
               const canCancel =
                 isOwner ||
                 user?.role === "admin" ||
+                canManageMembers ||
                 invitation.inviter_id === user?.id;
               const isThisInviteCancelling =
                 isCancellingInvite &&

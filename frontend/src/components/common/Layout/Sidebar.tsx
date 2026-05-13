@@ -9,7 +9,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ROUTES } from "@/constants";
-import { useAuth } from "@/hooks";
+import { useAuth, useGroupPermissions } from "@/hooks";
 import {
   useCreateGroupMutation,
   useGetGroupsQuery,
@@ -70,6 +70,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     (isGroupContext(location.pathname)
       ? location.pathname.split("/")[2]
       : undefined);
+
+  const { canViewMembersTab } = useGroupPermissions(activeGroupId);
 
   const inHomeContext =
     isHomeContext(location.pathname) && !isGroupContext(location.pathname);
@@ -320,21 +322,23 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 Dashboard
               </NavLink>
 
-              <NavLink
-                to={`/groups/${activeGroupId}/members`}
-                onClick={onClose}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-sidebar-accent text-sidebar-primary"
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  )
-                }
-              >
-                <Users className="h-4 w-4" />
-                Members
-              </NavLink>
+              {canViewMembersTab && (
+                <NavLink
+                  to={`/groups/${activeGroupId}/members`}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-primary"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    )
+                  }
+                >
+                  <Users className="h-4 w-4" />
+                  Members
+                </NavLink>
+              )}
 
               <NavLink
                 to={`/groups/${activeGroupId}/restaurants`}

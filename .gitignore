@@ -1,4 +1,5 @@
 **/.env
+backend/.env.test
 
 # Python
 __pycache__/

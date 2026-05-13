@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/hooks";
+import { useAuth, useGroupPermissions } from "@/hooks";
 import { useGetGroupMembersQuery } from "@/store/api/groupApi";
 import {
   useAddOrderItemMutation,
@@ -68,6 +68,7 @@ export function OrderDetailPage() {
     orderId: string;
   }>();
   const { user } = useAuth();
+  const { canManageOrderLifecycle } = useGroupPermissions(groupId);
   const {
     data: order,
     isLoading,
@@ -218,13 +219,10 @@ export function OrderDetailPage() {
     return <Alert variant="destructive">Failed to load order.</Alert>;
   }
 
-  const isInitiator = order.initiator_id === user?.id;
+  const canManage = canManageOrderLifecycle(order.initiator_id);
   const canEditInitiated = order.status === "initiated";
-  const canEditConfirmed =
-    order.status === "confirmed" &&
-    (isInitiator || user?.role === "admin");
+  const canEditConfirmed = order.status === "confirmed" && canManage;
   const canEdit = canEditInitiated || canEditConfirmed;
-  const canManage = isInitiator || user?.role === "admin";
   const nextAction = NEXT_STATUS[order.status];
   const style = STATUS_STYLES[order.status] ?? STATUS_STYLES.initiated;
 
@@ -700,7 +698,7 @@ export function OrderDetailPage() {
                           {canEdit &&
                             (canEditConfirmed ||
                               item.user_id === user?.id ||
-                              user?.role === "admin") && (
+                              canManage) && (
                               <>
                                 <Button
                                   variant="ghost"

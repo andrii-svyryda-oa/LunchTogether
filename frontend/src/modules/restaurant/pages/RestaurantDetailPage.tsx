@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useGroupPermissions } from "@/hooks";
 import {
   useCreateDishMutation,
   useDeleteDishMutation,
@@ -30,6 +31,7 @@ export function RestaurantDetailPage() {
   });
   const [createDish] = useCreateDishMutation();
   const [deleteDish] = useDeleteDishMutation();
+  const { canEditRestaurants } = useGroupPermissions(groupId);
 
   const [open, setOpen] = useState(false);
   const [dishName, setDishName] = useState("");
@@ -93,55 +95,57 @@ export function RestaurantDetailPage() {
             )}
           </div>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="shadow-md shadow-primary/20">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Dish
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Dish</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>Name</Label>
-                <Input
-                  value={dishName}
-                  onChange={(e) => setDishName(e.target.value)}
-                  placeholder="Margherita Pizza"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Detail (optional)</Label>
-                <Input
-                  value={dishDetail}
-                  onChange={(e) => setDishDetail(e.target.value)}
-                  placeholder="Large, extra cheese"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Price</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={dishPrice}
-                  onChange={(e) => setDishPrice(e.target.value)}
-                  placeholder="12.99"
-                />
-              </div>
-              <Button
-                onClick={handleAddDish}
-                disabled={!dishName.trim() || !dishPrice}
-                className="w-full"
-              >
+        {canEditRestaurants && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="shadow-md shadow-primary/20">
+                <Plus className="mr-2 h-4 w-4" />
                 Add Dish
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Dish</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input
+                    value={dishName}
+                    onChange={(e) => setDishName(e.target.value)}
+                    placeholder="Margherita Pizza"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Detail (optional)</Label>
+                  <Input
+                    value={dishDetail}
+                    onChange={(e) => setDishDetail(e.target.value)}
+                    placeholder="Large, extra cheese"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Price</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={dishPrice}
+                    onChange={(e) => setDishPrice(e.target.value)}
+                    placeholder="12.99"
+                  />
+                </div>
+                <Button
+                  onClick={handleAddDish}
+                  disabled={!dishName.trim() || !dishPrice}
+                  className="w-full"
+                >
+                  Add Dish
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="flex items-center gap-2 mb-5">
@@ -180,14 +184,16 @@ export function RestaurantDetailPage() {
                   <span className="font-semibold text-primary">
                     {Number(dish.price).toFixed(2)} ₴
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteDish(dish.id)}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {canEditRestaurants && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteDish(dish.id)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>

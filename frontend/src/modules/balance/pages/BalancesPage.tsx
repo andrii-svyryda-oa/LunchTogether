@@ -8,11 +8,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/hooks";
+import { useAuth, useGroupPermissions } from "@/hooks";
 import {
   useAdjustBalanceMutation,
   useGetBalanceHistoryQuery,
   useGetBalancesQuery,
+  useGetMyBalanceQuery,
 } from "@/store/api/balanceApi";
 import type { Balance } from "@/types";
 import { cn } from "@/utils";
@@ -23,7 +24,13 @@ import { useParams } from "react-router-dom";
 export function BalancesPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const { user } = useAuth();
-  const { data: balances, isLoading } = useGetBalancesQuery(groupId!);
+  const { canViewGroupBalances, canAdjustBalances } = useGroupPermissions(groupId);
+  const { data: balances, isLoading } = useGetBalancesQuery(groupId!, {
+    skip: !canViewGroupBalances,
+  });
+  const { data: myBalance, isLoading: isMyBalanceLoading } = useGetMyBalanceQuery(groupId!, {
+    skip: canViewGroupBalances,
+  });
   const [adjustBalance] = useAdjustBalanceMutation();
 
   // Adjust state — tracks which user's dialog is open
@@ -67,10 +74,58 @@ export function BalancesPage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isMyBalanceLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  // Personal-only view when the user does not have group-wide balance access
+  if (!canViewGroupBalances) {
+    return (
+      <div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight">Balances</h1>
+          <p className="text-muted-foreground mt-1">Your balance in this group.</p>
+        </div>
+        {myBalance ? (
+          <Card className="p-5">
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-xl",
+                  Number(myBalance.amount) >= 0
+                    ? "bg-emerald-50 text-emerald-600"
+                    : "bg-red-50 text-red-600",
+                )}
+              >
+                <Wallet className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">My Balance</p>
+                <p
+                  className={cn(
+                    "text-2xl font-bold",
+                    Number(myBalance.amount) >= 0
+                      ? "text-emerald-600"
+                      : "text-red-600",
+                  )}
+                >
+                  {Number(myBalance.amount).toFixed(2)} ₴
+                </p>
+              </div>
+            </div>
+          </Card>
+        ) : (
+          <Card className="flex flex-col items-center justify-center py-16 border-dashed">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted mb-4">
+              <Wallet className="h-7 w-7 text-muted-foreground" />
+            </div>
+            <p className="text-muted-foreground font-medium">No balance yet</p>
+          </Card>
+        )}
       </div>
     );
   }
@@ -178,15 +233,17 @@ export function BalancesPage() {
                       >
                         {Number(balance.amount).toFixed(2)} ₴
                       </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openAdjustDialog(balance)}
-                        className="text-muted-foreground"
-                        title="Adjust balance"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                      {canAdjustBalances && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openAdjustDialog(balance)}
+                          className="text-muted-foreground"
+                          title="Adjust balance"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"

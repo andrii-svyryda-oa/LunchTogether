@@ -1,7 +1,7 @@
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useAuth } from "@/hooks";
+import { useAuth, useGroupPermissions } from "@/hooks";
 import { useGetGroupAnalyticsQuery } from "@/store/api/analyticsApi";
 import { useGetMyBalanceQuery } from "@/store/api/balanceApi";
 import { useGetGroupQuery } from "@/store/api/groupApi";
@@ -25,8 +25,11 @@ export function GroupDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: group, isLoading, error } = useGetGroupQuery(groupId!);
+  const { canViewMembersTab, canViewGroupAnalytics } = useGroupPermissions(groupId);
   const { data: activeOrder } = useGetActiveOrderQuery(groupId!);
-  const { data: analytics } = useGetGroupAnalyticsQuery(groupId!);
+  const { data: analytics } = useGetGroupAnalyticsQuery(groupId!, {
+    skip: !canViewGroupAnalytics,
+  });
   const { data: myBalance } = useGetMyBalanceQuery(groupId!);
 
   // Auto-navigate to active order only when entering via group icon (not explicit dashboard click)
@@ -81,12 +84,14 @@ export function GroupDetailPage() {
 
       {/* Quick nav links */}
       <div className="flex flex-wrap gap-2 mb-8">
-        <Button variant="outline" size="sm" asChild className="rounded-full">
-          <Link to={`/groups/${groupId}/members`}>
-            <Users className="mr-2 h-4 w-4" />
-            Members ({group.members?.length ?? 0})
-          </Link>
-        </Button>
+        {canViewMembersTab && (
+          <Button variant="outline" size="sm" asChild className="rounded-full">
+            <Link to={`/groups/${groupId}/members`}>
+              <Users className="mr-2 h-4 w-4" />
+              Members ({group.members?.length ?? 0})
+            </Link>
+          </Button>
+        )}
         <Button variant="outline" size="sm" asChild className="rounded-full">
           <Link to={`/groups/${groupId}/restaurants`}>
             <UtensilsCrossed className="mr-2 h-4 w-4" />
@@ -139,64 +144,62 @@ export function GroupDetailPage() {
         </Link>
       )}
 
-      {/* Dashboard cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        {analytics && (
-          <>
-            <Card className="p-5 hover:shadow-md group">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 group-hover:scale-105 transition-transform">
-                  <ShoppingCart className="h-5 w-5" />
-                </div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Total Orders
-                </p>
+      {/* Dashboard cards — group-wide analytics, visible only when permitted */}
+      {canViewGroupAnalytics && analytics && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          <Card className="p-5 hover:shadow-md group">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 group-hover:scale-105 transition-transform">
+                <ShoppingCart className="h-5 w-5" />
               </div>
-              <p className="text-2xl font-bold">{analytics.total_orders}</p>
-            </Card>
-
-            <Card className="p-5 hover:shadow-md group">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-600 group-hover:scale-105 transition-transform">
-                  <DollarSign className="h-5 w-5" />
-                </div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Total Spent
-                </p>
-              </div>
-              <p className="text-2xl font-bold">
-                {Number(analytics.total_spent).toFixed(2)} ₴
+              <p className="text-sm font-medium text-muted-foreground">
+                Total Orders
               </p>
-            </Card>
+            </div>
+            <p className="text-2xl font-bold">{analytics.total_orders}</p>
+          </Card>
 
-            <Card className="p-5 hover:shadow-md group">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600 group-hover:scale-105 transition-transform">
-                  <Users className="h-5 w-5" />
-                </div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Members
-                </p>
+          <Card className="p-5 hover:shadow-md group">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-600 group-hover:scale-105 transition-transform">
+                <DollarSign className="h-5 w-5" />
               </div>
-              <p className="text-2xl font-bold">{analytics.total_members}</p>
-            </Card>
-
-            <Card className="p-5 hover:shadow-md group">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 group-hover:scale-105 transition-transform">
-                  <TrendingUp className="h-5 w-5" />
-                </div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Avg. Order
-                </p>
-              </div>
-              <p className="text-2xl font-bold">
-                {Number(analytics.average_order_value).toFixed(2)} ₴
+              <p className="text-sm font-medium text-muted-foreground">
+                Total Spent
               </p>
-            </Card>
-          </>
-        )}
-      </div>
+            </div>
+            <p className="text-2xl font-bold">
+              {Number(analytics.total_spent).toFixed(2)} ₴
+            </p>
+          </Card>
+
+          <Card className="p-5 hover:shadow-md group">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600 group-hover:scale-105 transition-transform">
+                <Users className="h-5 w-5" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">
+                Members
+              </p>
+            </div>
+            <p className="text-2xl font-bold">{analytics.total_members}</p>
+          </Card>
+
+          <Card className="p-5 hover:shadow-md group">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 group-hover:scale-105 transition-transform">
+                <TrendingUp className="h-5 w-5" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">
+                Avg. Order
+              </p>
+            </div>
+            <p className="text-2xl font-bold">
+              {Number(analytics.average_order_value).toFixed(2)} ₴
+            </p>
+          </Card>
+        </div>
+      )}
 
       {/* My balance */}
       {myBalance && (
@@ -238,7 +241,7 @@ export function GroupDetailPage() {
         </Card>
       )}
 
-      {analytics?.most_popular_restaurant && (
+      {canViewGroupAnalytics && analytics?.most_popular_restaurant && (
         <Card className="p-5 hover:shadow-md group">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600 group-hover:scale-105 transition-transform">

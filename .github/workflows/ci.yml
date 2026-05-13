@@ -7,6 +7,54 @@ on:
     branches: [ main, develop ]
 
 jobs:
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies (incl. dev group)
+        working-directory: ./backend
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv sync --dev
+
+      - name: Run tests
+        working-directory: ./backend
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run pytest -v
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test
+          JWT_SECRET_KEY: test-secret
+          UPLOAD_DIR: /tmp/uploads
+          ENVIRONMENT: test
+
   backend-lint:
     name: Backend Lint
     runs-on: ubuntu-latest
@@ -39,18 +87,6 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           uv run ruff format --check .
-
-      # Tests step intentionally omitted: no pytest suite exists yet.
-      # Re-add once tests are written, e.g.:
-      # - name: Run tests
-      #   working-directory: ./backend
-      #   run: |
-      #     export PATH="$HOME/.local/bin:$PATH"
-      #     uv run pytest
-      #   env:
-      #     DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
-      #     JWT_SECRET_KEY: test-secret-key
-      #     UPLOAD_DIR: /tmp/uploads
 
   frontend-build:
     name: Frontend Build & Type Check

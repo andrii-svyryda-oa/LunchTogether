@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useGroupPermissions } from "@/hooks";
 import {
   useCreateRestaurantMutation,
   useDeleteRestaurantMutation,
@@ -23,6 +24,7 @@ export function RestaurantListPage() {
   const { data: restaurants, isLoading } = useGetRestaurantsQuery(groupId!);
   const [createRestaurant] = useCreateRestaurantMutation();
   const [deleteRestaurant] = useDeleteRestaurantMutation();
+  const { canEditRestaurants } = useGroupPermissions(groupId);
 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -64,43 +66,45 @@ export function RestaurantListPage() {
             Manage your group&apos;s favorite places to eat.
           </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="shadow-md shadow-primary/20">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Restaurant
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Restaurant</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>Name</Label>
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Pizza Place"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Description (optional)</Label>
-                <Input
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </div>
-              <Button
-                onClick={handleCreate}
-                disabled={!name.trim()}
-                className="w-full"
-              >
-                Add
+        {canEditRestaurants && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="shadow-md shadow-primary/20">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Restaurant
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Restaurant</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Pizza Place"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description (optional)</Label>
+                  <Input
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                </div>
+                <Button
+                  onClick={handleCreate}
+                  disabled={!name.trim()}
+                  className="w-full"
+                >
+                  Add
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {restaurants && restaurants.length === 0 ? (
@@ -139,14 +143,16 @@ export function RestaurantListPage() {
                   </div>
                 </Link>
                 <div className="flex items-center justify-end gap-1 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(r.id)}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {canEditRestaurants && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(r.id)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Link to={`/groups/${groupId}/restaurants/${r.id}`}>
                     <ArrowRight className="h-4 w-4 text-muted-foreground opacity-100" />
                   </Link>

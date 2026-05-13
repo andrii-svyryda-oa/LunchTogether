@@ -9,6 +9,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { useGroupPermissions } from "@/hooks";
 import {
   useCreateOrderMutation,
   useGetOrdersQuery,
@@ -45,6 +46,7 @@ export function OrderListPage() {
   const { data: orders, isLoading } = useGetOrdersQuery(groupId!);
   const { data: restaurants } = useGetRestaurantsQuery(groupId!);
   const [createOrder] = useCreateOrderMutation();
+  const { canCreateOrder } = useGroupPermissions(groupId);
 
   const [open, setOpen] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState("");
@@ -91,52 +93,54 @@ export function OrderListPage() {
             View and manage all group orders.
           </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="shadow-md shadow-primary/20">
-              <Plus className="mr-2 h-4 w-4" />
-              New Order
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Start New Order</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>Restaurant</Label>
-                <Combobox
-                  options={restaurantOptions}
-                  value={selectedRestaurant}
-                  onChange={(val) => {
-                    setSelectedRestaurant(val);
-                    if (val) setCustomName("");
-                  }}
-                  placeholder="Select or type to create..."
-                  searchPlaceholder="Search restaurants..."
-                  emptyText="No restaurants found."
-                  allowCreate
-                  createLabel="Create"
-                  onCreateNew={(name) => {
-                    setSelectedRestaurant("");
-                    setCustomName(name);
-                  }}
-                />
-                {customName && !selectedRestaurant && (
-                  <p className="text-sm text-muted-foreground">
-                    New restaurant:{" "}
-                    <span className="font-medium text-foreground">
-                      {customName}
-                    </span>
-                  </p>
-                )}
-              </div>
-              <Button onClick={handleCreate} className="w-full">
-                Start Order
+        {canCreateOrder && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="shadow-md shadow-primary/20">
+                <Plus className="mr-2 h-4 w-4" />
+                New Order
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Start New Order</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label>Restaurant</Label>
+                  <Combobox
+                    options={restaurantOptions}
+                    value={selectedRestaurant}
+                    onChange={(val) => {
+                      setSelectedRestaurant(val);
+                      if (val) setCustomName("");
+                    }}
+                    placeholder="Select or type to create..."
+                    searchPlaceholder="Search restaurants..."
+                    emptyText="No restaurants found."
+                    allowCreate
+                    createLabel="Create"
+                    onCreateNew={(name) => {
+                      setSelectedRestaurant("");
+                      setCustomName(name);
+                    }}
+                  />
+                  {customName && !selectedRestaurant && (
+                    <p className="text-sm text-muted-foreground">
+                      New restaurant:{" "}
+                      <span className="font-medium text-foreground">
+                        {customName}
+                      </span>
+                    </p>
+                  )}
+                </div>
+                <Button onClick={handleCreate} className="w-full">
+                  Start Order
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {orders && orders.length === 0 ? (
