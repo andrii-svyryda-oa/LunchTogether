@@ -60,6 +60,8 @@ export function GroupMembersPage() {
   const [inviteRole, setInviteRole] = useState("member");
   const [inviteError, setInviteError] = useState<string | null>(null);
 
+  const { canInviteMembers, canManageMembers } = useGroupPermissions(groupId);
+
   const getErrorMessage = (error: unknown): string => {
     const err = error as { data?: { detail?: string } };
     return err?.data?.detail ?? "Failed to send invitation. Please try again.";
@@ -116,7 +118,6 @@ export function GroupMembersPage() {
   }
 
   const isOwner = group?.owner_id === user?.id;
-  const { canInviteMembers, canManageMembers } = useGroupPermissions(groupId);
 
   return (
     <div>
