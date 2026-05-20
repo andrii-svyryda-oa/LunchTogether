@@ -1,3 +1,4 @@
+import { Linkify } from "@/components/common/Linkify/Linkify";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -150,9 +151,10 @@ export function RestaurantDetailPage() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
                   Ordering details
                 </p>
-                <p className="text-sm whitespace-pre-line break-words">
-                  {restaurant.menu_url}
-                </p>
+                <Linkify
+                  text={restaurant.menu_url}
+                  className="block text-sm whitespace-pre-line break-words"
+                />
               </div>
             )}
           </div>
