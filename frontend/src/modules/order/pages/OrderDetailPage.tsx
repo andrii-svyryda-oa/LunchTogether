@@ -778,7 +778,7 @@ export function OrderDetailPage() {
                 key={userId}
                 className={
                   isMe
-                    ? "rounded-2xl border border-primary/30 bg-primary/5 p-4 -m-1"
+                    ? "rounded-2xl border border-primary/30 bg-primary/5 p-4 -mx-1 -mt-1 mb-3"
                     : undefined
                 }
               >
