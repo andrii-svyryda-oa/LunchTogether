@@ -25,6 +25,7 @@ import { useGetRestaurantQuery } from "@/store/api/restaurantApi";
 import type { OrderItem } from "@/types";
 import { cn } from "@/utils";
 import {
+  Copy,
   DollarSign,
   Info,
   Minus,
@@ -148,6 +149,24 @@ export function OrderDetailPage() {
     }
   };
 
+  const handleCopyToSelf = async (item: OrderItem) => {
+    try {
+      await addItem({
+        groupId: groupId!,
+        orderId: orderId!,
+        data: {
+          name: item.name,
+          detail: item.detail ?? undefined,
+          price: Number(item.price),
+          quantity: 1,
+          dish_id: item.dish_id ?? undefined,
+        },
+      }).unwrap();
+    } catch {
+      // handled
+    }
+  };
+
   const openEditDialog = (item: OrderItem) => {
     setEditItem(item);
     setEditName(item.name);
@@ -254,6 +273,13 @@ export function OrderDetailPage() {
     {} as Record<string, { name: string; items: typeof order.items }>,
   );
 
+  // Sort entries so the current user appears first.
+  const sortedUserEntries = Object.entries(itemsByUser).sort(([a], [b]) => {
+    if (a === user?.id) return -1;
+    if (b === user?.id) return 1;
+    return 0;
+  });
+
   // Get members not currently in the order (for "Add member dish" in confirmed state)
   const existingParticipantIds = new Set(Object.keys(itemsByUser));
   const availableMembers = groupMembers?.filter(
@@ -263,6 +289,26 @@ export function OrderDetailPage() {
   // Calculate per-user subtotals
   const getUserSubtotal = (items: typeof order.items) =>
     items.reduce((sum, item) => sum + Number(item.price) * (item.quantity ?? 1), 0);
+
+  // Dedupe helpers — match by dish_id when present, otherwise by name+detail+price.
+  const itemKey = (item: OrderItem | { name: string; detail: string | null; price: number; dish_id: string | null }) =>
+    item.dish_id ? `dish:${item.dish_id}` : `custom:${item.name}|${item.detail ?? ""}|${Number(item.price)}`;
+
+  const targetUserId = addForUserId ?? user?.id ?? null;
+  const targetUserKeys = new Set(
+    order.items
+      .filter((i) => i.user_id === targetUserId)
+      .map((i) => itemKey(i)),
+  );
+
+  const myKeys = new Set(
+    order.items.filter((i) => i.user_id === user?.id).map((i) => itemKey(i)),
+  );
+
+  const isDuplicateForTarget = (dish: { id: string; name: string; detail: string | null; price: number }) =>
+    targetUserKeys.has(itemKey({ name: dish.name, detail: dish.detail, price: Number(dish.price), dish_id: dish.id }));
+
+  const alreadyHaveItem = (item: OrderItem) => myKeys.has(itemKey(item));
 
   return (
     <div>
@@ -515,25 +561,30 @@ export function OrderDetailPage() {
               <div className="space-y-2">
                 <Label>Choose from menu</Label>
                 <div className="max-h-48 overflow-y-auto space-y-1 rounded-md border p-1">
-                  {restaurant.dishes.map((dish) => (
-                    <Button
-                      key={dish.id}
-                      type="button"
-                      variant={selectedDishId === dish.id ? "default" : "outline"}
-                      className="w-full justify-between h-auto py-2 px-3"
-                      onClick={() => {
-                        setSelectedDishId(dish.id);
-                        setItemName(dish.name);
-                        setItemDetail(dish.detail ?? "");
-                        setItemPrice(String(dish.price));
-                      }}
-                    >
-                      <span className="font-medium text-sm">{dish.name}</span>
-                      <span className="text-sm text-muted-foreground ml-2 shrink-0">
-                        {Number(dish.price).toFixed(2)} ₴
-                      </span>
-                    </Button>
-                  ))}
+                  {restaurant.dishes.map((dish) => {
+                    const duplicate = isDuplicateForTarget(dish);
+                    return (
+                      <Button
+                        key={dish.id}
+                        type="button"
+                        variant={selectedDishId === dish.id ? "default" : "outline"}
+                        className="w-full justify-between h-auto py-2 px-3"
+                        disabled={duplicate}
+                        title={duplicate ? "Already in this person's order" : undefined}
+                        onClick={() => {
+                          setSelectedDishId(dish.id);
+                          setItemName(dish.name);
+                          setItemDetail(dish.detail ?? "");
+                          setItemPrice(String(dish.price));
+                        }}
+                      >
+                        <span className="font-medium text-sm">{dish.name}</span>
+                        <span className="text-sm text-muted-foreground ml-2 shrink-0">
+                          {duplicate ? "Already added" : `${Number(dish.price).toFixed(2)} ₴`}
+                        </span>
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -714,21 +765,41 @@ export function OrderDetailPage() {
         </Card>
       ) : (
         <div className="space-y-6">
-          {Object.entries(itemsByUser).map(([userId, { name, items }]) => {
+          {sortedUserEntries.map(([userId, { name, items }]) => {
             const subtotal = getUserSubtotal(items);
             const deliveryShare = order.delivery_fee_per_person
               ? Number(order.delivery_fee_per_person)
               : 0;
             const memberTotal = subtotal + deliveryShare;
+            const isMe = userId === user?.id;
 
             return (
-              <div key={userId}>
+              <div
+                key={userId}
+                className={
+                  isMe
+                    ? "rounded-2xl border border-primary/30 bg-primary/5 p-4 -m-1"
+                    : undefined
+                }
+              >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold shrink-0">
+                    <div
+                      className={cn(
+                        "flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold shrink-0",
+                        isMe
+                          ? "bg-primary text-primary-foreground ring-2 ring-primary/30"
+                          : "bg-primary text-primary-foreground",
+                      )}
+                    >
                       {name.charAt(0).toUpperCase()}
                     </div>
                     <h3 className="font-medium text-sm">{name}</h3>
+                    {isMe && (
+                      <span className="text-[10px] uppercase tracking-wide bg-primary text-primary-foreground px-1.5 py-0.5 rounded-md font-semibold">
+                        You
+                      </span>
+                    )}
                     <span className="text-xs text-muted-foreground ml-1">
                       {subtotal.toFixed(2)} ₴
                       {deliveryShare > 0 && (
@@ -754,57 +825,74 @@ export function OrderDetailPage() {
                   )}
                 </div>
                 <div className="space-y-2 ml-9">
-                  {items.map((item) => (
-                    <Card key={item.id} className="p-3.5 hover:shadow-md">
-                      <div className="flex items-center justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{item.name}</p>
-                            {(item.quantity ?? 1) > 1 && (
-                              <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded-md font-medium">
-                                x{item.quantity}
-                              </span>
+                  {items.map((item) => {
+                    const isMine = item.user_id === user?.id;
+                    const canCopyToSelf =
+                      canEditInitiated && !isMine && !alreadyHaveItem(item);
+                    return (
+                      <Card key={item.id} className="p-3.5 hover:shadow-md">
+                        <div className="flex items-center justify-between">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{item.name}</p>
+                              {(item.quantity ?? 1) > 1 && (
+                                <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded-md font-medium">
+                                  x{item.quantity}
+                                </span>
+                              )}
+                            </div>
+                            {item.detail && (
+                              <p className="text-sm text-muted-foreground">
+                                {item.detail}
+                              </p>
                             )}
                           </div>
-                          {item.detail && (
-                            <p className="text-sm text-muted-foreground">
-                              {item.detail}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <span className="font-semibold text-primary">
-                            {(item.quantity ?? 1) > 1
-                              ? `${Number(item.price).toFixed(2)} × ${item.quantity} = ${(Number(item.price) * (item.quantity ?? 1)).toFixed(2)} ₴`
-                              : `${Number(item.price).toFixed(2)} ₴`}
-                          </span>
-                          {canEdit &&
-                            (canEditConfirmed ||
-                              item.user_id === user?.id ||
-                              canManage) && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => openEditDialog(item)}
-                                  className="text-muted-foreground hover:text-primary"
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDeleteItem(item.id)}
-                                  className="text-muted-foreground hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className="font-semibold text-primary">
+                              {(item.quantity ?? 1) > 1
+                                ? `${Number(item.price).toFixed(2)} × ${item.quantity} = ${(Number(item.price) * (item.quantity ?? 1)).toFixed(2)} ₴`
+                                : `${Number(item.price).toFixed(2)} ₴`}
+                            </span>
+                            {canCopyToSelf && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleCopyToSelf(item)}
+                                title="Add this dish for myself"
+                                aria-label="Add this dish for myself"
+                                className="text-muted-foreground hover:text-primary"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
                             )}
+                            {canEdit &&
+                              (canEditConfirmed ||
+                                item.user_id === user?.id ||
+                                canManage) && (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => openEditDialog(item)}
+                                    className="text-muted-foreground hover:text-primary"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDeleteItem(item.id)}
+                                    className="text-muted-foreground hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                          </div>
                         </div>
-                      </div>
-                    </Card>
-                  ))}
+                      </Card>
+                    );
+                  })}
                 </div>
               </div>
             );
