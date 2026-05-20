@@ -1,0 +1,26 @@
+import { Card, CardContent } from "@/components/ui/card";
+import { APP } from "@/constants";
+import { UtensilsCrossed } from "lucide-react";
+import { ResetPasswordForm } from "../components/ResetPasswordForm";
+
+export function ResetPasswordPage() {
+  return (
+    <div className="flex min-h-[80vh] items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/25 mb-4">
+            <UtensilsCrossed className="h-7 w-7 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">{APP.NAME}</h1>
+          <p className="text-muted-foreground mt-1">Choose a new password</p>
+        </div>
+
+        <Card className="border-0 shadow-xl shadow-black/5">
+          <CardContent className="pt-6">
+            <ResetPasswordForm />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

@@ -111,3 +111,81 @@ class EmailService:
 </html>"""
 
         await self.send_email(to_email, subject, html_body)
+
+    async def send_password_reset_email(
+        self,
+        to_email: str,
+        user_name: str,
+        token: str,
+    ) -> None:
+        """Send a password reset email."""
+        reset_url = f"{settings.frontend_url}/reset-password?token={token}"
+        subject = "Reset your LunchTogether password"
+
+        html_body = f"""\
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0; padding:0; background-color:#faf8f5; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#faf8f5; padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#f97316; padding:32px 40px; text-align:center;">
+              <span style="font-size:28px;">🔒</span>
+              <h1 style="margin:8px 0 0; color:#ffffff; font-size:22px; font-weight:700; letter-spacing:-0.02em;">
+                LunchTogether
+              </h1>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:36px 40px 20px;">
+              <h2 style="margin:0 0 8px; color:#1c1917; font-size:20px; font-weight:600;">
+                Password reset request
+              </h2>
+              <p style="margin:0 0 24px; color:#57534e; font-size:15px; line-height:1.6;">
+                Hi <strong style="color:#1c1917;">{user_name}</strong>,<br><br>
+                We received a request to reset your LunchTogether password. Click the button below
+                to choose a new password. This link will expire in 1 hour.
+              </p>
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding:8px 0 24px;">
+                    <a href="{reset_url}"
+                       style="display:inline-block; background-color:#f97316; color:#ffffff; font-size:15px; font-weight:600; text-decoration:none; padding:12px 32px; border-radius:10px; box-shadow:0 2px 8px rgba(249,115,22,0.25);">
+                      Reset Password
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 16px; color:#78716c; font-size:13px; line-height:1.5;">
+                If the button doesn't work, copy and paste this link into your browser:
+              </p>
+              <p style="margin:0 0 24px; word-break:break-all; color:#f97316; font-size:13px;">
+                {reset_url}
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 40px 28px; border-top:1px solid #f0ebe4;">
+              <p style="margin:0; color:#a8a29e; font-size:12px; text-align:center;">
+                If you didn't request a password reset, you can safely ignore this email.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+        await self.send_email(to_email, subject, html_body)

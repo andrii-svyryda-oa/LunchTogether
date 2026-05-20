@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,3 +19,12 @@ class UserRepository(BaseRepository[User]):
     async def exists_by_email(self, email: str) -> bool:
         user = await self.get_by_email(email)
         return user is not None
+
+    async def update_password(self, user_id: uuid.UUID, hashed_password: str) -> User | None:
+        user = await self.get_by_id(user_id)
+        if user is None:
+            return None
+        user.hashed_password = hashed_password
+        await self.session.flush()
+        await self.session.refresh(user)
+        return user

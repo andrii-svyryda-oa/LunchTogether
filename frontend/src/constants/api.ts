@@ -4,6 +4,8 @@ export const API_ENDPOINTS = {
     REGISTER: "/auth/register",
     LOGOUT: "/auth/logout",
     ME: "/auth/me",
+    REQUEST_PASSWORD_RESET: "/auth/password-reset/request",
+    CONFIRM_PASSWORD_RESET: "/auth/password-reset/confirm",
   },
   USERS: {
     LIST: "/users",

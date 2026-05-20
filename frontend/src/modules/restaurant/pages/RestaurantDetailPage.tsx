@@ -10,14 +10,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useGroupPermissions } from "@/hooks";
 import {
   useCreateDishMutation,
   useDeleteDishMutation,
   useGetRestaurantQuery,
+  useUpdateRestaurantMutation,
 } from "@/store/api/restaurantApi";
-import { Plus, Trash2, UtensilsCrossed } from "lucide-react";
-import { useState } from "react";
+import { Pencil, Plus, Trash2, UtensilsCrossed } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 export function RestaurantDetailPage() {
@@ -31,12 +33,47 @@ export function RestaurantDetailPage() {
   });
   const [createDish] = useCreateDishMutation();
   const [deleteDish] = useDeleteDishMutation();
+  const [updateRestaurant] = useUpdateRestaurantMutation();
   const { canEditRestaurants } = useGroupPermissions(groupId);
 
   const [open, setOpen] = useState(false);
   const [dishName, setDishName] = useState("");
   const [dishDetail, setDishDetail] = useState("");
   const [dishPrice, setDishPrice] = useState("");
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editMenuUrl, setEditMenuUrl] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (editOpen && restaurant) {
+      setEditName(restaurant.name);
+      setEditDescription(restaurant.description ?? "");
+      setEditMenuUrl(restaurant.menu_url ?? "");
+      setEditError(null);
+    }
+  }, [editOpen, restaurant]);
+
+  const handleSaveDetails = async () => {
+    setEditError(null);
+    try {
+      await updateRestaurant({
+        groupId: groupId!,
+        restaurantId: restaurantId!,
+        data: {
+          name: editName,
+          description: editDescription ? editDescription : null,
+          menu_url: editMenuUrl ? editMenuUrl : null,
+        },
+      }).unwrap();
+      setEditOpen(false);
+    } catch (error: unknown) {
+      const err = error as { data?: { detail?: string } };
+      setEditError(err?.data?.detail ?? "Failed to update restaurant.");
+    }
+  };
 
   const handleAddDish = async () => {
     try {
@@ -81,24 +118,49 @@ export function RestaurantDetailPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
+      <div className="flex items-start justify-between mb-8 gap-4">
+        <div className="flex items-start gap-4 min-w-0 flex-1">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 shadow-sm shrink-0">
             <UtensilsCrossed className="h-7 w-7" />
           </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {restaurant.name}
-            </h1>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-3xl font-bold tracking-tight">
+                {restaurant.name}
+              </h1>
+              {canEditRestaurants && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setEditOpen(true)}
+                  className="h-8 w-8 text-muted-foreground hover:text-primary"
+                  aria-label="Edit restaurant details"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
             {restaurant.description && (
-              <p className="text-muted-foreground">{restaurant.description}</p>
+              <p className="text-muted-foreground mt-1 whitespace-pre-line">
+                {restaurant.description}
+              </p>
+            )}
+            {restaurant.menu_url && (
+              <div className="mt-3 rounded-lg bg-muted/60 px-3 py-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                  Ordering details
+                </p>
+                <p className="text-sm whitespace-pre-line break-words">
+                  {restaurant.menu_url}
+                </p>
+              </div>
             )}
           </div>
         </div>
         {canEditRestaurants && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="shadow-md shadow-primary/20">
+              <Button className="shadow-md shadow-primary/20 shrink-0">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Dish
               </Button>
@@ -200,6 +262,56 @@ export function RestaurantDetailPage() {
           ))}
         </div>
       )}
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Restaurant Details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            {editError && (
+              <Alert variant="destructive" className="text-sm">
+                {editError}
+              </Alert>
+            )}
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Pizza Place"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="What makes this place special..."
+                maxLength={1000}
+                rows={4}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Ordering Details</Label>
+              <Textarea
+                value={editMenuUrl}
+                onChange={(e) => setEditMenuUrl(e.target.value)}
+                placeholder="Phone, website, hours, delivery notes..."
+                maxLength={2000}
+                rows={3}
+              />
+            </div>
+            <Button
+              onClick={handleSaveDetails}
+              disabled={!editName.trim()}
+              className="w-full"
+            >
+              Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

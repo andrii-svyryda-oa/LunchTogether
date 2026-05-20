@@ -53,3 +53,12 @@ class UserResponse(BaseSchema):
     navigate_to_active_order: bool
     created_at: datetime
     updated_at: datetime
+
+
+class PasswordResetRequest(BaseSchema):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseSchema):
+    token: str = Field(min_length=1)
+    new_password: str = Field(min_length=8, max_length=128)

@@ -7,8 +7,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Alert } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useGroupPermissions } from "@/hooks";
 import {
   useCreateRestaurantMutation,
@@ -29,18 +31,27 @@ export function RestaurantListPage() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [menuUrl, setMenuUrl] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const handleCreate = async () => {
+    setCreateError(null);
     try {
       await createRestaurant({
         groupId: groupId!,
-        data: { name, description: description || undefined },
+        data: {
+          name,
+          description: description || undefined,
+          menu_url: menuUrl || undefined,
+        },
       }).unwrap();
       setOpen(false);
       setName("");
       setDescription("");
-    } catch {
-      // handled
+      setMenuUrl("");
+    } catch (error: unknown) {
+      const err = error as { data?: { detail?: string } };
+      setCreateError(err?.data?.detail ?? "Failed to create restaurant.");
     }
   };
 
@@ -79,6 +90,11 @@ export function RestaurantListPage() {
                 <DialogTitle>Add Restaurant</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-4">
+                {createError && (
+                  <Alert variant="destructive" className="text-sm">
+                    {createError}
+                  </Alert>
+                )}
                 <div className="space-y-2">
                   <Label>Name</Label>
                   <Input
@@ -89,9 +105,22 @@ export function RestaurantListPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Description (optional)</Label>
-                  <Input
+                  <Textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
+                    placeholder="What makes this place special..."
+                    maxLength={1000}
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Ordering Details (optional)</Label>
+                  <Textarea
+                    value={menuUrl}
+                    onChange={(e) => setMenuUrl(e.target.value)}
+                    placeholder="Phone, website, hours, delivery notes..."
+                    maxLength={2000}
+                    rows={3}
                   />
                 </div>
                 <Button

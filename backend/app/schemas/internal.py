@@ -5,6 +5,7 @@ needed when creating or updating database records.
 """
 
 import uuid
+from datetime import datetime
 from decimal import Decimal
 
 from app.models.enums import BalanceChangeType, InvitationStatus, OrderStatus, UserRole
@@ -20,6 +21,24 @@ class UserInternalCreate(BaseSchema):
     role: UserRole = UserRole.USER
     is_active: bool = True
     is_verified: bool = False
+
+
+class UserPasswordUpdate(BaseSchema):
+    hashed_password: str
+
+
+# --- Password Reset Token ---
+
+
+class PasswordResetTokenInternalCreate(BaseSchema):
+    user_id: uuid.UUID
+    token: str
+    expires_at: datetime
+    used: bool = False
+
+
+class PasswordResetTokenMarkUsed(BaseSchema):
+    used: bool = True
 
 
 # --- Group ---
@@ -65,6 +84,7 @@ class GroupInvitationStatusUpdate(BaseSchema):
 class RestaurantInternalCreate(BaseSchema):
     name: str
     description: str | None = None
+    menu_url: str | None = None
     group_id: uuid.UUID
 
 

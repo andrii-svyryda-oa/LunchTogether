@@ -17,6 +17,15 @@ export interface AuthResponse {
   message?: string;
 }
 
+export interface PasswordResetRequestPayload {
+  email: string;
+}
+
+export interface PasswordResetConfirmPayload {
+  token: string;
+  new_password: string;
+}
+
 // Users
 export interface UserListParams {
   page?: number;
@@ -89,11 +98,13 @@ export interface InvitationCreateRequest {
 export interface RestaurantCreateRequest {
   name: string;
   description?: string;
+  menu_url?: string | null;
 }
 
 export interface RestaurantUpdateRequest {
   name?: string;
-  description?: string;
+  description?: string | null;
+  menu_url?: string | null;
 }
 
 export interface DishCreateRequest {

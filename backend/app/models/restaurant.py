@@ -19,6 +19,10 @@ class Restaurant(BaseModel):
         String(1000),
         nullable=True,
     )
+    menu_url: Mapped[str | None] = mapped_column(
+        String(2000),
+        nullable=True,
+    )
     group_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("groups.id", ondelete="CASCADE"),

@@ -25,6 +25,7 @@ import type { OrderItem } from "@/types";
 import { cn } from "@/utils";
 import {
   DollarSign,
+  Info,
   Minus,
   Pencil,
   Plus,
@@ -234,6 +235,12 @@ export function OrderDetailPage() {
   const canEdit = canEditInitiated || canEditConfirmed;
   const nextAction = NEXT_STATUS[order.status];
   const style = STATUS_STYLES[order.status] ?? STATUS_STYLES.initiated;
+  const isInitiator = user?.id === order.initiator_id;
+  const showRestaurantDetails =
+    isInitiator &&
+    order.status === "initiated" &&
+    restaurant !== undefined &&
+    (Boolean(restaurant.description) || Boolean(restaurant.menu_url));
 
   // Group items by user
   const itemsByUser = order.items.reduce(
@@ -282,6 +289,39 @@ export function OrderDetailPage() {
           </p>
         </div>
       </div>
+
+      {/* Restaurant details (initiator-only, initiated phase) */}
+      {showRestaurantDetails && (
+        <Card className="p-5 mb-8 border-l-4 border-l-primary bg-primary/5">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
+              <Info className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1 space-y-3">
+              {restaurant?.description && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                    Description
+                  </p>
+                  <p className="text-sm whitespace-pre-line">
+                    {restaurant.description}
+                  </p>
+                </div>
+              )}
+              {restaurant?.menu_url && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                    Ordering details
+                  </p>
+                  <p className="text-sm whitespace-pre-line break-words">
+                    {restaurant.menu_url}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-3 mb-8">

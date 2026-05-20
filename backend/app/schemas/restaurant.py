@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from app.schemas.base import BaseSchema
 
@@ -12,17 +12,34 @@ from app.schemas.base import BaseSchema
 class RestaurantCreate(BaseSchema):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=1000)
+    menu_url: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("menu_url", mode="before")
+    @classmethod
+    def _normalize_menu_url(cls, value: str | None) -> str | None:
+        if value is None or value == "":
+            return None
+        return value
 
 
 class RestaurantUpdate(BaseSchema):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=1000)
+    menu_url: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("menu_url", mode="before")
+    @classmethod
+    def _normalize_menu_url(cls, value: str | None) -> str | None:
+        if value is None or value == "":
+            return None
+        return value
 
 
 class RestaurantResponse(BaseSchema):
     id: uuid.UUID
     name: str
     description: str | None
+    menu_url: str | None
     group_id: uuid.UUID
     created_at: datetime
     updated_at: datetime

@@ -11,11 +11,28 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { useLoginForm } from "../hooks/useLoginForm";
+import { useResetPasswordForm } from "../hooks/useResetPasswordForm";
 import { ROUTES } from "@/constants";
 
-export function LoginForm() {
-  const { form, onSubmit, serverError, isSubmitting } = useLoginForm();
+export function ResetPasswordForm() {
+  const { form, onSubmit, serverError, isSubmitting, hasToken } =
+    useResetPasswordForm();
+
+  if (!hasToken) {
+    return (
+      <div className="space-y-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            This reset link is missing or invalid. Please request a new one.
+          </AlertDescription>
+        </Alert>
+        <Button asChild className="w-full">
+          <Link to={ROUTES.FORGOT_PASSWORD}>Request a new link</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <Form {...form}>
@@ -29,15 +46,15 @@ export function LoginForm() {
 
         <FormField
           control={form.control}
-          name="email"
+          name="new_password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>New password</FormLabel>
               <FormControl>
                 <Input
-                  type="email"
-                  placeholder="Enter your email"
-                  autoComplete="email"
+                  type="password"
+                  placeholder="Enter a new password"
+                  autoComplete="new-password"
                   {...field}
                 />
               </FormControl>
@@ -48,23 +65,15 @@ export function LoginForm() {
 
         <FormField
           control={form.control}
-          name="password"
+          name="confirm_password"
           render={({ field }) => (
             <FormItem>
-              <div className="flex items-center justify-between">
-                <FormLabel>Password</FormLabel>
-                <Link
-                  to={ROUTES.FORGOT_PASSWORD}
-                  className="text-xs font-medium text-primary underline-offset-4 hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
+              <FormLabel>Confirm password</FormLabel>
               <FormControl>
                 <Input
                   type="password"
-                  placeholder="Enter your password"
-                  autoComplete="current-password"
+                  placeholder="Repeat the new password"
+                  autoComplete="new-password"
                   {...field}
                 />
               </FormControl>
@@ -75,16 +84,15 @@ export function LoginForm() {
 
         <Button type="submit" className="w-full" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Sign In
+          Reset Password
         </Button>
 
         <p className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
           <Link
-            to={ROUTES.REGISTER}
+            to={ROUTES.LOGIN}
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
-            Register
+            Back to login
           </Link>
         </p>
       </form>

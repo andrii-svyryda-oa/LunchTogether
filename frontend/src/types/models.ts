@@ -92,6 +92,7 @@ export interface Restaurant {
   id: string;
   name: string;
   description: string | null;
+  menu_url: string | null;
   group_id: string;
   created_at: string;
   updated_at: string;

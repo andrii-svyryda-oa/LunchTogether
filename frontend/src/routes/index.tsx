@@ -4,8 +4,10 @@ import { ProtectedRoute } from "@/components/common/ProtectedRoute/ProtectedRout
 import { ROUTES } from "@/constants";
 import { createBrowserRouter } from "react-router-dom";
 
+import { ForgotPasswordPage } from "@/modules/auth/pages/ForgotPasswordPage";
 import { LoginPage } from "@/modules/auth/pages/LoginPage";
 import { RegisterPage } from "@/modules/auth/pages/RegisterPage";
+import { ResetPasswordPage } from "@/modules/auth/pages/ResetPasswordPage";
 import { BalancesPage } from "@/modules/balance/pages/BalancesPage";
 import { AcceptInvitationPage } from "@/modules/invitations/pages/AcceptInvitationPage";
 import { PendingInvitesPage } from "@/modules/invitations/pages/PendingInvitesPage";
@@ -76,6 +78,14 @@ export const router = createBrowserRouter([
       {
         path: ROUTES.REGISTER,
         element: <RegisterPage />,
+      },
+      {
+        path: ROUTES.FORGOT_PASSWORD,
+        element: <ForgotPasswordPage />,
+      },
+      {
+        path: ROUTES.RESET_PASSWORD,
+        element: <ResetPasswordPage />,
       },
 
       // Invitations — accept is public (handles unauthenticated users)

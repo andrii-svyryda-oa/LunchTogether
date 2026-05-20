@@ -46,6 +46,7 @@ class CreateRestaurantWorkflow:
             RestaurantInternalCreate(
                 name=input_data.data.name,
                 description=input_data.data.description,
+                menu_url=input_data.data.menu_url,
                 group_id=input_data.group_id,
             )
         )

@@ -15,6 +15,7 @@ from app.repositories.group import (
     GroupRepository,
 )
 from app.repositories.order import FavoriteDishRepository, OrderItemRepository, OrderRepository
+from app.repositories.password_reset import PasswordResetTokenRepository
 from app.repositories.restaurant import DishRepository, RestaurantRepository
 from app.repositories.user import UserRepository
 from app.workflows.analytics.group import GetGroupAnalyticsWorkflow
@@ -64,11 +65,13 @@ from app.workflows.restaurant.get import GetRestaurantWorkflow
 from app.workflows.restaurant.list import ListRestaurantsWorkflow
 from app.workflows.restaurant.update import UpdateRestaurantWorkflow
 from app.workflows.user.admin_update import AdminUpdateUserWorkflow
+from app.workflows.user.confirm_password_reset import ConfirmPasswordResetWorkflow
 from app.workflows.user.create import CreateUserWorkflow
 from app.workflows.user.get import GetUserWorkflow
 from app.workflows.user.list import ListUsersWorkflow
 from app.workflows.user.login import LoginWorkflow
 from app.workflows.user.register import RegisterWorkflow
+from app.workflows.user.request_password_reset import RequestPasswordResetWorkflow
 from app.workflows.user.update import UpdateUserWorkflow
 
 # --- Repository factories ---
@@ -122,6 +125,12 @@ def get_balance_history_repository(session: AsyncSession = Depends(get_db)) -> B
     return BalanceHistoryRepository(session)
 
 
+def get_password_reset_token_repository(
+    session: AsyncSession = Depends(get_db),
+) -> PasswordResetTokenRepository:
+    return PasswordResetTokenRepository(session)
+
+
 # --- Service factories ---
 
 
@@ -143,6 +152,21 @@ def get_login_workflow(
     user_repository: UserRepository = Depends(get_user_repository),
 ) -> LoginWorkflow:
     return LoginWorkflow(user_repository)
+
+
+def get_request_password_reset_workflow(
+    user_repository: UserRepository = Depends(get_user_repository),
+    token_repository: PasswordResetTokenRepository = Depends(get_password_reset_token_repository),
+    email_service: EmailService = Depends(get_email_service),
+) -> RequestPasswordResetWorkflow:
+    return RequestPasswordResetWorkflow(user_repository, token_repository, email_service)
+
+
+def get_confirm_password_reset_workflow(
+    user_repository: UserRepository = Depends(get_user_repository),
+    token_repository: PasswordResetTokenRepository = Depends(get_password_reset_token_repository),
+) -> ConfirmPasswordResetWorkflow:
+    return ConfirmPasswordResetWorkflow(user_repository, token_repository)
 
 
 def get_create_group_workflow(

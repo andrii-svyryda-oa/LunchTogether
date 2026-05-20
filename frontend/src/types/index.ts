@@ -53,6 +53,8 @@ export type {
   OrderSetDeliveryFeeRequest,
   PaginatedResponse,
   PaginationParams,
+  PasswordResetConfirmPayload,
+  PasswordResetRequestPayload,
   RegisterRequest,
   RestaurantCreateRequest,
   RestaurantUpdateRequest,
