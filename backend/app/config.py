@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     # JWT
     jwt_secret_key: str = "your-secret-key-here"
     jwt_algorithm: str = "HS256"
-    jwt_access_token_expire_minutes: int = 6000
+    jwt_access_token_expire_minutes: int = 60 * 24 * 3  # 3 days
 
     # File Storage
     upload_dir: str = "/var/www/lunchtogether/uploads"

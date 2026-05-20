@@ -25,6 +25,7 @@ import { useGetRestaurantQuery } from "@/store/api/restaurantApi";
 import type { OrderItem } from "@/types";
 import { cn } from "@/utils";
 import {
+  ClipboardCheck,
   Copy,
   DollarSign,
   Info,
@@ -118,6 +119,19 @@ export function OrderDetailPage() {
 
   // Add for member dialog state (confirmed state)
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
+
+  // Aggregated checklist state (UI-only, not persisted)
+  const [aggregateOpen, setAggregateOpen] = useState(false);
+  const [checkedKeys, setCheckedKeys] = useState<Set<string>>(new Set());
+
+  const toggleCheckedKey = (key: string) => {
+    setCheckedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const resetAddForm = () => {
     setItemName("");
@@ -309,6 +323,25 @@ export function OrderDetailPage() {
     targetUserKeys.has(itemKey({ name: dish.name, detail: dish.detail, price: Number(dish.price), dish_id: dish.id }));
 
   const alreadyHaveItem = (item: OrderItem) => myKeys.has(itemKey(item));
+
+  // Aggregated checklist — merge same items across users, sum quantities.
+  const aggregatedItems = (() => {
+    const map = new Map<
+      string,
+      { key: string; name: string; detail: string | null; quantity: number }
+    >();
+    for (const item of order.items) {
+      const key = itemKey(item);
+      const qty = item.quantity ?? 1;
+      const existing = map.get(key);
+      if (existing) {
+        existing.quantity += qty;
+      } else {
+        map.set(key, { key, name: item.name, detail: item.detail, quantity: qty });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  })();
 
   return (
     <div>
@@ -526,6 +559,13 @@ export function OrderDetailPage() {
               </div>
             </DialogContent>
           </Dialog>
+        )}
+
+        {order.status === "confirmed" && order.items.length > 0 && (
+          <Button variant="outline" onClick={() => setAggregateOpen(true)}>
+            <ClipboardCheck className="mr-2 h-4 w-4" />
+            What to Order
+          </Button>
         )}
 
         {canManage && nextAction && (
@@ -748,6 +788,96 @@ export function OrderDetailPage() {
               Save Changes
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Aggregated checklist (UI-only, not persisted) */}
+      <Dialog open={aggregateOpen} onOpenChange={setAggregateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>What to Order</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground pt-2">
+            Tick items off as you place them with the restaurant. This list
+            resets on refresh.
+          </p>
+          <div className="space-y-2 pt-3 max-h-[60vh] overflow-y-auto">
+            {aggregatedItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No items to aggregate.
+              </p>
+            ) : (
+              aggregatedItems.map((row) => {
+                const isChecked = checkedKeys.has(row.key);
+                return (
+                  <label
+                    key={row.key}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                      isChecked
+                        ? "bg-muted/50 border-muted"
+                        : "hover:bg-muted/30",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleCheckedKey(row.key)}
+                      className="h-4 w-4 shrink-0 accent-primary cursor-pointer"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={cn(
+                          "font-medium",
+                          isChecked && "line-through text-muted-foreground",
+                        )}
+                      >
+                        {row.name}
+                      </p>
+                      {row.detail && (
+                        <p
+                          className={cn(
+                            "text-sm text-muted-foreground",
+                            isChecked && "line-through",
+                          )}
+                        >
+                          {row.detail}
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      className={cn(
+                        "text-sm font-semibold shrink-0",
+                        isChecked
+                          ? "text-muted-foreground"
+                          : "text-primary",
+                      )}
+                    >
+                      ×{row.quantity}
+                    </span>
+                  </label>
+                );
+              })
+            )}
+          </div>
+          {aggregatedItems.length > 0 && (
+            <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground">
+              <span>
+                {checkedKeys.size} / {aggregatedItems.length} ordered
+              </span>
+              {checkedKeys.size > 0 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCheckedKeys(new Set())}
+                  className="h-7 text-xs"
+                >
+                  Reset
+                </Button>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
