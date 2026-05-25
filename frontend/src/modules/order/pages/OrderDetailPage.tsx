@@ -381,6 +381,27 @@ export function OrderDetailPage() {
     <div>
       {/* Header — lifecycle actions on the left, title on the right */}
       <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
+        <div className="text-right order-1 md:order-2 md:ml-auto">
+          <div className="flex items-center justify-end gap-3 mb-1 flex-wrap">
+            <h1 className="text-3xl font-bold tracking-tight">
+              {order.restaurant_name ?? "Custom Order"}
+            </h1>
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium",
+                style.bg,
+                style.text,
+              )}
+            >
+              <span className={cn("h-1.5 w-1.5 rounded-full", style.dot)} />
+              {order.status}
+            </span>
+          </div>
+          <p className="text-muted-foreground">
+            By {order.initiator_name} &middot;{" "}
+            {new Date(order.created_at).toLocaleDateString()}
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-2 order-2 md:order-1">
           {canManage && order.status === "initiated" && (
             <Button onClick={() => handleTransition("confirmed")}>
@@ -413,28 +434,6 @@ export function OrderDetailPage() {
                 Cancel Order
               </Button>
             )}
-        </div>
-
-        <div className="text-right order-1 md:order-2 md:ml-auto">
-          <div className="flex items-center justify-end gap-3 mb-1 flex-wrap">
-            <h1 className="text-3xl font-bold tracking-tight">
-              {order.restaurant_name ?? "Custom Order"}
-            </h1>
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium",
-                style.bg,
-                style.text,
-              )}
-            >
-              <span className={cn("h-1.5 w-1.5 rounded-full", style.dot)} />
-              {order.status}
-            </span>
-          </div>
-          <p className="text-muted-foreground">
-            By {order.initiator_name} &middot;{" "}
-            {new Date(order.created_at).toLocaleDateString()}
-          </p>
         </div>
       </div>
 
