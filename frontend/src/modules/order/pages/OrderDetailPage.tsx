@@ -61,12 +61,6 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string }> =
     cancelled: { bg: "bg-red-50", text: "text-red-700", dot: "bg-red-500" },
   };
 
-const NEXT_STATUS: Record<string, { label: string; status: string }> = {
-  initiated: { label: "Confirm Order", status: "confirmed" },
-  confirmed: { label: "Mark as Ordered", status: "ordered" },
-  ordered: { label: "Mark as Finished", status: "finished" },
-};
-
 export function OrderDetailPage() {
   const { groupId, orderId } = useParams<{
     groupId: string;
@@ -225,6 +219,15 @@ export function OrderDetailPage() {
     await updateStatus({ groupId: groupId!, orderId: orderId!, status });
   };
 
+  const handleConfirmOrdered = async () => {
+    await updateStatus({
+      groupId: groupId!,
+      orderId: orderId!,
+      status: "ordered",
+    });
+    setAggregateOpen(false);
+  };
+
   const handleSetFee = async () => {
     try {
       await setDeliveryFee({
@@ -267,11 +270,8 @@ export function OrderDetailPage() {
   const canEditInitiated = order.status === "initiated";
   const canEditConfirmed = order.status === "confirmed" && canManage;
   const canEdit = canEditInitiated || canEditConfirmed;
-  const nextAction = NEXT_STATUS[order.status];
   const style = STATUS_STYLES[order.status] ?? STATUS_STYLES.initiated;
-  const isInitiator = user?.id === order.initiator_id;
   const showRestaurantDetails =
-    isInitiator &&
     order.status === "initiated" &&
     restaurant !== undefined &&
     (Boolean(restaurant.description) || Boolean(restaurant.menu_url));
@@ -280,7 +280,8 @@ export function OrderDetailPage() {
   const itemsByUser = order.items.reduce(
     (acc, item) => {
       const key = item.user_id;
-      if (!acc[key]) acc[key] = { name: item.user_full_name ?? item.user_id, items: [] };
+      if (!acc[key])
+        acc[key] = { name: item.user_full_name ?? item.user_id, items: [] };
       acc[key].items.push(item);
       return acc;
     },
@@ -302,11 +303,25 @@ export function OrderDetailPage() {
 
   // Calculate per-user subtotals
   const getUserSubtotal = (items: typeof order.items) =>
-    items.reduce((sum, item) => sum + Number(item.price) * (item.quantity ?? 1), 0);
+    items.reduce(
+      (sum, item) => sum + Number(item.price) * (item.quantity ?? 1),
+      0,
+    );
 
   // Dedupe helpers — match by dish_id when present, otherwise by name+detail+price.
-  const itemKey = (item: OrderItem | { name: string; detail: string | null; price: number; dish_id: string | null }) =>
-    item.dish_id ? `dish:${item.dish_id}` : `custom:${item.name}|${item.detail ?? ""}|${Number(item.price)}`;
+  const itemKey = (
+    item:
+      | OrderItem
+      | {
+          name: string;
+          detail: string | null;
+          price: number;
+          dish_id: string | null;
+        },
+  ) =>
+    item.dish_id
+      ? `dish:${item.dish_id}`
+      : `custom:${item.name}|${item.detail ?? ""}|${Number(item.price)}`;
 
   const targetUserId = addForUserId ?? user?.id ?? null;
   const targetUserKeys = new Set(
@@ -319,8 +334,20 @@ export function OrderDetailPage() {
     order.items.filter((i) => i.user_id === user?.id).map((i) => itemKey(i)),
   );
 
-  const isDuplicateForTarget = (dish: { id: string; name: string; detail: string | null; price: number }) =>
-    targetUserKeys.has(itemKey({ name: dish.name, detail: dish.detail, price: Number(dish.price), dish_id: dish.id }));
+  const isDuplicateForTarget = (dish: {
+    id: string;
+    name: string;
+    detail: string | null;
+    price: number;
+  }) =>
+    targetUserKeys.has(
+      itemKey({
+        name: dish.name,
+        detail: dish.detail,
+        price: Number(dish.price),
+        dish_id: dish.id,
+      }),
+    );
 
   const alreadyHaveItem = (item: OrderItem) => myKeys.has(itemKey(item));
 
@@ -337,18 +364,59 @@ export function OrderDetailPage() {
       if (existing) {
         existing.quantity += qty;
       } else {
-        map.set(key, { key, name: item.name, detail: item.detail, quantity: qty });
+        map.set(key, {
+          key,
+          name: item.name,
+          detail: item.detail,
+          quantity: qty,
+        });
       }
     }
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+    return Array.from(map.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
   })();
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
+      {/* Header — lifecycle actions on the left, title on the right */}
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
+        <div className="flex flex-wrap items-center gap-2 order-2 md:order-1">
+          {canManage && order.status === "initiated" && (
+            <Button onClick={() => handleTransition("confirmed")}>
+              Confirm Order
+            </Button>
+          )}
+
+          {canManage &&
+            order.status === "confirmed" &&
+            order.items.length > 0 && (
+              <Button onClick={() => setAggregateOpen(true)}>
+                <ClipboardCheck className="mr-2 h-4 w-4" />
+                Order
+              </Button>
+            )}
+
+          {canManage && order.status === "ordered" && (
+            <Button onClick={() => handleTransition("finished")}>
+              Mark as Finished
+            </Button>
+          )}
+
+          {canManage &&
+            order.status !== "finished" &&
+            order.status !== "cancelled" && (
+              <Button
+                variant="destructive"
+                onClick={() => handleTransition("cancelled")}
+              >
+                Cancel Order
+              </Button>
+            )}
+        </div>
+
+        <div className="text-right order-1 md:order-2 md:ml-auto">
+          <div className="flex items-center justify-end gap-3 mb-1 flex-wrap">
             <h1 className="text-3xl font-bold tracking-tight">
               {order.restaurant_name ?? "Custom Order"}
             </h1>
@@ -444,16 +512,16 @@ export function OrderDetailPage() {
               {canManage &&
                 order.status !== "finished" &&
                 order.status !== "cancelled" && (
-                <DialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-3 right-3 h-7 w-7 text-muted-foreground hover:text-primary"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                </DialogTrigger>
-              )}
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-3 right-3 h-7 w-7 text-muted-foreground hover:text-primary"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </DialogTrigger>
+                )}
             </div>
             <p className="text-2xl font-bold">
               {order.delivery_fee_total
@@ -537,7 +605,9 @@ export function OrderDetailPage() {
                     {Object.keys(itemsByUser).length > 0 && (
                       <div className="border-t my-2" />
                     )}
-                    <p className="text-xs text-muted-foreground px-1 pb-1">Other group members</p>
+                    <p className="text-xs text-muted-foreground px-1 pb-1">
+                      Other group members
+                    </p>
                     {availableMembers.map((member) => (
                       <Button
                         key={member.user_id}
@@ -549,7 +619,9 @@ export function OrderDetailPage() {
                         }}
                       >
                         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-muted-foreground text-[10px] font-bold mr-2 shrink-0">
-                          {(member.user_full_name ?? "?").charAt(0).toUpperCase()}
+                          {(member.user_full_name ?? "?")
+                            .charAt(0)
+                            .toUpperCase()}
                         </div>
                         {member.user_full_name ?? member.user_email}
                       </Button>
@@ -560,34 +632,16 @@ export function OrderDetailPage() {
             </DialogContent>
           </Dialog>
         )}
-
-        {order.status === "confirmed" && order.items.length > 0 && (
-          <Button variant="outline" onClick={() => setAggregateOpen(true)}>
-            <ClipboardCheck className="mr-2 h-4 w-4" />
-            What to Order
-          </Button>
-        )}
-
-        {canManage && nextAction && (
-          <Button onClick={() => handleTransition(nextAction.status)}>
-            {nextAction.label}
-          </Button>
-        )}
-
-        {canManage &&
-          order.status !== "finished" &&
-          order.status !== "cancelled" && (
-            <Button
-              variant="destructive"
-              onClick={() => handleTransition("cancelled")}
-            >
-              Cancel Order
-            </Button>
-          )}
       </div>
 
       {/* Add Item Dialog */}
-      <Dialog open={addOpen} onOpenChange={(open) => { setAddOpen(open); if (!open) resetAddForm(); }}>
+      <Dialog
+        open={addOpen}
+        onOpenChange={(open) => {
+          setAddOpen(open);
+          if (!open) resetAddForm();
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -597,37 +651,49 @@ export function OrderDetailPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
-            {restaurant && restaurant.dishes && restaurant.dishes.length > 0 && (
-              <div className="space-y-2">
-                <Label>Choose from menu</Label>
-                <div className="max-h-48 overflow-y-auto space-y-1 rounded-md border p-1">
-                  {restaurant.dishes.map((dish) => {
-                    const duplicate = isDuplicateForTarget(dish);
-                    return (
-                      <Button
-                        key={dish.id}
-                        type="button"
-                        variant={selectedDishId === dish.id ? "default" : "outline"}
-                        className="w-full justify-between h-auto py-2 px-3"
-                        disabled={duplicate}
-                        title={duplicate ? "Already in this person's order" : undefined}
-                        onClick={() => {
-                          setSelectedDishId(dish.id);
-                          setItemName(dish.name);
-                          setItemDetail(dish.detail ?? "");
-                          setItemPrice(String(dish.price));
-                        }}
-                      >
-                        <span className="font-medium text-sm">{dish.name}</span>
-                        <span className="text-sm text-muted-foreground ml-2 shrink-0">
-                          {duplicate ? "Already added" : `${Number(dish.price).toFixed(2)} ₴`}
-                        </span>
-                      </Button>
-                    );
-                  })}
+            {restaurant &&
+              restaurant.dishes &&
+              restaurant.dishes.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Choose from menu</Label>
+                  <div className="max-h-48 overflow-y-auto space-y-1 rounded-md border p-1">
+                    {restaurant.dishes.map((dish) => {
+                      const duplicate = isDuplicateForTarget(dish);
+                      return (
+                        <Button
+                          key={dish.id}
+                          type="button"
+                          variant={
+                            selectedDishId === dish.id ? "default" : "outline"
+                          }
+                          className="w-full justify-between h-auto py-2 px-3"
+                          disabled={duplicate}
+                          title={
+                            duplicate
+                              ? "Already in this person's order"
+                              : undefined
+                          }
+                          onClick={() => {
+                            setSelectedDishId(dish.id);
+                            setItemName(dish.name);
+                            setItemDetail(dish.detail ?? "");
+                            setItemPrice(String(dish.price));
+                          }}
+                        >
+                          <span className="font-medium text-sm">
+                            {dish.name}
+                          </span>
+                          <span className="text-sm text-muted-foreground ml-2 shrink-0">
+                            {duplicate
+                              ? "Already added"
+                              : `${Number(dish.price).toFixed(2)} ₴`}
+                          </span>
+                        </Button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
             <div className="space-y-2">
               <Label>Dish Name</Label>
               <Input
@@ -671,7 +737,9 @@ export function OrderDetailPage() {
                     size="icon"
                     className="h-9 w-9 shrink-0"
                     onClick={() =>
-                      setItemQuantity(String(Math.max(1, parseInt(itemQuantity) - 1)))
+                      setItemQuantity(
+                        String(Math.max(1, parseInt(itemQuantity) - 1)),
+                      )
                     }
                     disabled={parseInt(itemQuantity) <= 1}
                   >
@@ -710,7 +778,13 @@ export function OrderDetailPage() {
       </Dialog>
 
       {/* Edit Item Dialog */}
-      <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) setEditItem(null); }}>
+      <Dialog
+        open={editOpen}
+        onOpenChange={(open) => {
+          setEditOpen(open);
+          if (!open) setEditItem(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Dish</DialogTitle>
@@ -753,7 +827,9 @@ export function OrderDetailPage() {
                     size="icon"
                     className="h-9 w-9 shrink-0"
                     onClick={() =>
-                      setEditQuantity(String(Math.max(1, parseInt(editQuantity) - 1)))
+                      setEditQuantity(
+                        String(Math.max(1, parseInt(editQuantity) - 1)),
+                      )
                     }
                     disabled={parseInt(editQuantity) <= 1}
                   >
@@ -795,13 +871,14 @@ export function OrderDetailPage() {
       <Dialog open={aggregateOpen} onOpenChange={setAggregateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>What to Order</DialogTitle>
+            <DialogTitle>Place the Order</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground pt-2">
-            Tick items off as you place them with the restaurant. This list
-            resets on refresh.
+            Tick items off as you place them with the restaurant. Checking
+            everything is optional &mdash; when you&apos;re ready, hit{" "}
+            <span className="font-medium text-foreground">Order</span>.
           </p>
-          <div className="space-y-2 pt-3 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-2 pt-3 max-h-[50vh] overflow-y-auto">
             {aggregatedItems.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
                 No items to aggregate.
@@ -848,9 +925,7 @@ export function OrderDetailPage() {
                     <span
                       className={cn(
                         "text-sm font-semibold shrink-0",
-                        isChecked
-                          ? "text-muted-foreground"
-                          : "text-primary",
+                        isChecked ? "text-muted-foreground" : "text-primary",
                       )}
                     >
                       ×{row.quantity}
@@ -863,7 +938,7 @@ export function OrderDetailPage() {
           {aggregatedItems.length > 0 && (
             <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground">
               <span>
-                {checkedKeys.size} / {aggregatedItems.length} ordered
+                {checkedKeys.size} / {aggregatedItems.length} checked
               </span>
               {checkedKeys.size > 0 && (
                 <Button
@@ -877,6 +952,15 @@ export function OrderDetailPage() {
                 </Button>
               )}
             </div>
+          )}
+          {canManage && order.status === "confirmed" && (
+            <Button
+              onClick={handleConfirmOrdered}
+              className="w-full mt-2"
+              disabled={aggregatedItems.length === 0}
+            >
+              Order
+            </Button>
           )}
         </DialogContent>
       </Dialog>
